@@ -2,4 +2,5 @@ build
 install
 log
 __py*
+*.swp
 
