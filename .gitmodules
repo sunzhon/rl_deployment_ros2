@@ -1,6 +1,3 @@
-[submodule "src/joy"]
-	path = src/joy
-	url = git@github.com:sunzhon/joy.git
 [submodule "src/ambot_msgs"]
 	path = src/ambot_msgs
 	url = git@github.com:sunzhon/ambot_msgs.git
