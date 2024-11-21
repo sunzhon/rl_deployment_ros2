@@ -38,10 +38,10 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 
 	// init state and action msg buffer
 	this->get_parameter("motor_num", this->motor_num);
-	action_ptr->motor_num = motor_num;
-	action_ptr->motor_action.resize(motor_num);
-	state_ptr->motor_num = motor_num;
-	state_ptr->motor_state.resize(motor_num);
+	action_ptr->motor_num = this->motor_num;
+	action_ptr->motor_action.resize(this->motor_num);
+	state_ptr->motor_num = this->motor_num;
+	state_ptr->motor_state.resize(this->motor_num);
 
 	// open motor and imu devices
 	devices.resize(2);
@@ -79,7 +79,8 @@ void RobotRosNode::action_timer_callback() // for peroidic publish data
 
 
 void RobotRosNode::action_callback(ambot_msgs::msg::Action::SharedPtr data) const{
-	assert(motor_num==data->motor_num);
+	std::cout<<motor_num<<std::endl;
+	assert(this->motor_num==data->motor_num);
 	for (int i = 0; i < data->motor_num; i++){
 		action_ptr->motor_action[i].q = data->motor_action[i].q;
 		action_ptr->motor_action[i].dq = data->motor_action[i].dq;

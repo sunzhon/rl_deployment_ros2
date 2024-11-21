@@ -23,15 +23,14 @@ class ZeroActModel(torch.nn.Module):
 
     def forward(self, dof_pos):
         target = torch.zeros_like(dof_pos)
-        diff = dof_pos - target
-        diff_large_mask = torch.abs(diff) > self.angle_tolerance
-        target[diff_large_mask] = dof_pos[diff_large_mask] \
-            - self.delta * torch.sign(diff[diff_large_mask])
+        #diff = dof_pos - target
+        #diff_large_mask = torch.abs(diff) > self.angle_tolerance
+        #target[diff_large_mask] = dof_pos[diff_large_mask] - self.delta * torch.sign(diff[diff_large_mask])
         return target
 
 class AmbotNode(Ros2RealRobot):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, robot_class_name= "AmbotW1", **kwargs)
+        super().__init__(*args, **kwargs)
 
     def register_models(self, stand_model, task_model, task_policy):
         self.stand_model = stand_model
@@ -47,16 +46,23 @@ class AmbotNode(Ros2RealRobot):
         )
         
     def main_loop(self):
-        if (self.joy_stick_buffer.keys & self.WirelessButtons.L1) and self.use_stand_policy:
-            self.get_logger().info("L1 pressed, stop using stand policy")
+        if (self.joy_stick_buffer.motion_mode==1):
+            self.get_logger().info("Left down button was pressed, using stand policy")
+            self.use_stand_policy = True
+
+        if (self.joy_stick_buffer.motion_mode==2) and self.use_stand_policy:
+            self.get_logger().info("Right down button was pressed, stop using stand policy")
             self.use_stand_policy = False
+
+        if (self.joy_stick_buffer.motion_mode==3):
+            self.get_logger().info("Right button 1, reset the policy")
+            self.task_model.reset()
+
         if self.use_stand_policy:
             obs = self._get_dof_pos_obs() # do not multiply by obs_scales["dof_pos"]
             action = self.stand_model(obs)
             if (action == 0).all():
                 self.get_logger().info("All actions are zero, it's time to switch to the policy", throttle_duration_sec= 1)
-                # else:
-                    # print("maximum dof error: {:.3f}".format(action.abs().max().item(), end= "\r"))
             self.send_action(action / self.action_scale)
         else:
             # start_time = time.monotonic()
@@ -72,16 +78,14 @@ class AmbotNode(Ros2RealRobot):
             #     "policy_time: {:.5f}".format(policy_time - obs_time),
             #     "publish_time: {:.5f}".format(publish_time - policy_time),
             # )
-        if (self.joy_stick_buffer.keys & self.WirelessButtons.Y):
-            self.get_logger().info("Y pressed, reset the policy")
-            self.task_model.reset()
 
 @torch.inference_mode()
 def main(args):
     rclpy.init()
-
+    package_path=osp.dirname(osp.dirname(osp.abspath(__file__)))
     assert args.logdir is not None, "Please provide a logdir"
-    with open(osp.join(args.logdir, "config.json"), "r") as f:
+    args.logdir = osp.join(package_path,"config/policies",args.logdir)
+    with open(osp.join(args.logdir,"config.json"), "r") as f:
         config_dict = json.load(f, object_pairs_hook= OrderedDict)
     
     # modify the config_dict if needed
@@ -91,7 +95,8 @@ def main(args):
     device = "cpu"
 
     env_node = AmbotNode(
-        "ambotw1",
+        namespace="ambotw1_ns",
+        robot_class_name="AmbotW1",
         # low_cmd_topic= "low_cmd_dryrun", # for the dryrun safety
         cfg= config_dict,
         replace_obs_with_embeddings= ["forward_depth"],
@@ -119,7 +124,6 @@ def main(args):
     env_node.get_logger().info("Control Duration: {} sec".format(duration))
     env_node.get_logger().info("Motor Stiffness (kp): {}".format(env_node.p_gains))
     env_node.get_logger().info("Motor Damping (kd): {}".format(env_node.d_gains))
-
 
     # zero_act_model to start the safe standing
     zero_act_model = ZeroActModel()
@@ -159,7 +163,6 @@ def main(args):
             main_loop_time = time.monotonic()
             env_node.main_loop()
             rclpy.spin_once(env_node, timeout_sec= 0.)
-            # env_node.get_logger().info("loop time: {:f}".format((time.monotonic() - main_loop_time)))
             time.sleep(max(0, duration - (time.monotonic() - main_loop_time)))
     elif args.loop_mode == "timer":
         env_node.start_main_loop_timer(duration)
@@ -173,11 +176,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--logdir", type= str, default= None, help= "The directory which contains the config.json and model_*.pt files")
-    parser.add_argument("--nodryrun", action= "store_true", default= False, help= "Disable dryrun mode")
+    parser.add_argument("--nodryrun", action= "store_true", default= True, help= "Disable dryrun mode")
     parser.add_argument("--loop_mode", type= str, default= "timer",
         choices= ["while", "timer"],
         help= "Select which mode to run the main policy control iteration",
     )
-
     args = parser.parse_args()
     main(args)

@@ -4,3 +4,6 @@
 [submodule "src/ambot_msgs"]
 	path = src/ambot_msgs
 	url = git@github.com:sunzhon/ambot_msgs.git
+[submodule "src/ros2joyremap"]
+	path = src/ros2joyremap
+	url = git@github.com:sunzhon/ros2joyremap.git

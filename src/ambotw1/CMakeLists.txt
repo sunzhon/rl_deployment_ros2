@@ -76,9 +76,11 @@ install(TARGETS
 install(FILES ${LIB_PATH}/${EXTRA_LIBS}
         DESTINATION lib)
 
-install(
-  DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME}
+
+# Install launch files.
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
 )
 
 ament_package()

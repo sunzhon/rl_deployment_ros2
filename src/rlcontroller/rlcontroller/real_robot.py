@@ -167,10 +167,10 @@ class RobotCfgs:
 class Ros2RealRobot(Node):
 
     def __init__(self,
-            robot_namespace= None,
+            namespace= None,
             low_state_topic= "/state",
             low_cmd_topic= "/action",
-            joy_stick_topic = "/joystick",
+            joy_stick_topic = "/joy_cmd",
             forward_depth_topic = None, # if None and still need access, set to str "pyrealsense"
             forward_depth_embedding_topic = "/forward_depth_embedding",
             cfg= dict(),
@@ -183,16 +183,16 @@ class Ros2RealRobot(Node):
             robot_class_name= "AmbotN1",
             dryrun= True, # if True, the robot will not send commands to the real robot
         ):
-        super().__init__("ros2_real")
+        super().__init__("ros2_rlcontroller_node")
         self.NUM_DOF = getattr(RobotCfgs, robot_class_name).NUM_DOF
         self.NUM_ACTIONS = getattr(RobotCfgs, robot_class_name).NUM_ACTIONS
-        self.robot_namespace = robot_namespace
-        self.low_state_topic = low_state_topic
+        self.namespace = namespace
+        self.low_state_topic = namespace+low_state_topic
         # Generate a unique cmd topic so that the low_cmd will not send to the robot's motor.
-        self.low_cmd_topic = low_cmd_topic #if not dryrun else low_cmd_topic + "_dryrun_" + str(np.random.randint(0, 65535))
-        self.joy_stick_topic = joy_stick_topic
-        self.forward_depth_topic = forward_depth_topic
-        self.forward_depth_embedding_topic = forward_depth_embedding_topic
+        self.low_cmd_topic = namespace+low_cmd_topic #if not dryrun else low_cmd_topic + "_dryrun_" + str(np.random.randint(0, 65535))
+        self.joy_stick_topic = "".join([namespace, joy_stick_topic])
+        self.forward_depth_topic = None if forward_depth_topic is None else "".join([namespace, forward_depth_topic])
+        self.forward_depth_embedding_topic = "".join([namespace, forward_depth_embedding_topic])
         self.cfg = cfg
 
         self.lin_vel_deadband = lin_vel_deadband
@@ -250,7 +250,7 @@ class Ros2RealRobot(Node):
             name = self.dof_names[i] # set p_gains in simulation order
             for k, v in self.cfg["control"]["stiffness"].items():
                 if k in name:
-                    self.p_gains.append(v)
+                    self.p_gains.append(v)# NOTE
                     break # only one match
         self.p_gains = torch.tensor(self.p_gains, device= self.model_device, dtype= torch.float32)
         self.d_gains = []
@@ -258,7 +258,7 @@ class Ros2RealRobot(Node):
             name = self.dof_names[i] # set d_gains in simulation order
             for k, v in self.cfg["control"]["damping"].items():
                 if k in name:
-                    self.d_gains.append(v)
+                    self.d_gains.append(v) #NOTE
                     break
         self.d_gains = torch.tensor(self.d_gains, device= self.model_device, dtype= torch.float32)
         self.default_dof_pos = torch.zeros(self.NUM_DOF, device= self.model_device, dtype= torch.float32)
@@ -316,7 +316,8 @@ class Ros2RealRobot(Node):
             qos_profile
         )
         self.low_cmd_buffer = Action()
-        #self.low_cmd_buffer.motor_action = [MotorAction]*self.num_actions
+        self.low_cmd_buffer.motor_action = [MotorAction()]*self.num_actions
+        self.low_cmd_buffer.motor_num=self.num_actions
 
         # ROS subscribers
         self.low_state_sub = self.create_subscription(
@@ -385,7 +386,7 @@ class Ros2RealRobot(Node):
     def _joy_stick_callback(self, msg):
         self.joy_stick_buffer = msg
         self.xyyaw_command = torch.tensor([msg.vx, msg.vy, msg.wz], device= self.model_device, dtype= torch.float32)
-        if(msg.mode==-1):
+        if(msg.motion_mode==-1):
             self.get_logger().warn("Shutdown button was pressed, the motors and this process shuts down.")
             self._turn_off_motors()
             raise SystemExit()
@@ -449,7 +450,11 @@ class Ros2RealRobot(Node):
             quat_from_euler_xyz(self.roll_pitch_yaw_cmd[:, 0], self.roll_pitch_yaw_cmd[:, 1], self.roll_pitch_yaw_cmd[:, 2]),
             self.gravity_vec,
         )
-    
+
+    def _get_height_measurements_obs(self):
+        print("warning, height measurement is not valid on real robot")
+        return torch.zeros(1, len(self.cfg["terrain"]["measured_points_x"]), len(self.cfg["terrain"]["measured_points_y"]))
+
     def get_num_obs_from_components(self, components):
         obs_segments = self.get_obs_segment_from_components(components)
         num_obs = 0
@@ -574,29 +579,33 @@ class Ros2RealRobot(Node):
         robot_coordinates_action: shape (NUM_DOF,), in simulation order.
         """
         for sim_idx in range(self.NUM_DOF):
+            tmp = MotorAction()
             real_idx = self.dof_map[sim_idx]
             if not self.dryrun:
-                self.low_cmd_buffer.motor_action[real_idx].mode = self.turn_on_motor_mode[sim_idx]
-            self.low_cmd_buffer.motor_action[real_idx].id = sim_idx+1
-            self.low_cmd_buffer.motor_action[real_idx].q = robot_coordinates_action[sim_idx].item() * self.dof_signs[sim_idx]
-            self.low_cmd_buffer.motor_action[real_idx].dq = 0.
-            self.low_cmd_buffer.motor_action[real_idx].tau = 0.
-            self.low_cmd_buffer.motor_action[real_idx].kp = self.p_gains[sim_idx].item()
-            self.low_cmd_buffer.motor_action[real_idx].kd = self.d_gains[sim_idx].item()
+                tmp.mode = self.turn_on_motor_mode[sim_idx]
+            tmp.id = sim_idx+1
+            tmp.q = robot_coordinates_action[sim_idx].item() * self.dof_signs[sim_idx]
+            tmp.dq = 0.
+            tmp.tau = 0.
+            tmp.kp = self.p_gains[sim_idx].item()
+            tmp.kd = self.d_gains[sim_idx].item()
+            self.low_cmd_buffer.motor_action[real_idx]=tmp
         
         self.low_cmd_pub.publish(self.low_cmd_buffer)
 
     def _turn_off_motors(self):
         """ Turn off the motors """
         for sim_idx in range(self.NUM_DOF):
+            tmp = MotorAction()
             real_idx = self.dof_map[sim_idx]
-            import pdb;pdb.set_trace()
-            self.low_cmd_buffer.motor_action[real_idx].mode = 0x00
-            self.low_cmd_buffer.motor_action[real_idx].q = 0.
-            self.low_cmd_buffer.motor_action[real_idx].dq = 0.
-            self.low_cmd_buffer.motor_action[real_idx].tau = 0.
-            self.low_cmd_buffer.motor_action[real_idx].kp = 0.
-            self.low_cmd_buffer.motor_action[real_idx].kd = 0.
+            tmp.mode = 0x00
+            tmp.id = sim_idx+1
+            tmp.q = 0.
+            tmp.dq = 0.
+            tmp.tau = 0.
+            tmp.kp = 0.
+            tmp.kd = 0.
+            self.low_cmd_buffer.motor_action[real_idx]=tmp
         self.low_cmd_pub.publish(self.low_cmd_buffer)
     """ Done: functions that actually publish the commands and take effect """
 
