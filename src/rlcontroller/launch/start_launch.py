@@ -37,6 +37,6 @@ def generate_launch_description():
     ld = LaunchDescription()
     ld.add_action(robot_launch_file)
     ld.add_action(joyremap_launch_file)
-    #ld.add_action(controller_launch_file)
+    ld.add_action(controller_launch_file)
  
     return ld

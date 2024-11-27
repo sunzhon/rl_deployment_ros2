@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from unitree_ros2_real import UnitreeRos2Real
+from rlcontroller.real_robot import Ros2RealRobot, get_euler_xyz
 from std_msgs.msg import Float32MultiArray
 from sensor_msgs.msg import Image, CameraInfo
 
@@ -268,67 +268,8 @@ class VisualHandlerNode(Node):
             self.get_logger().warn("One frame of depth embedding if not acquired")
 
 @torch.inference_mode()
-def main(args):
-    rclpy.init()
-
-    assert args.logdir is not None, "Please provide a logdir"
-    with open(osp.join(args.logdir, "config.json"), "r") as f:
-        config_dict = json.load(f, object_pairs_hook= OrderedDict)
-        
-    device = "cpu"
-    duration = config_dict["sensor"]["forward_camera"]["refresh_duration"] # in sec
-
-    visual_node = VisualHandlerNode(
-        cfg= json.load(open(osp.join(args.logdir, "config.json"), "r")),
-        cropping= [args.crop_top, args.crop_bottom, args.crop_left, args.crop_right],
-        rs_resolution= (args.width, args.height),
-        rs_fps= args.fps,
-        enable_rgb= args.rgb,
-    )
-
-    env_node = UnitreeRos2Real(
-        "visual_h1",
-        low_cmd_topic= "low_cmd_dryrun", # This node should not publish any command at all
-        cfg= config_dict,
-        model_device= device,
-        robot_class_name= "Go2",
-        dryrun= True, # The robot node in this process should not run at all
-    )
-
-    model = getattr(modules, config_dict["runner"]["policy_class_name"])(
-        num_actor_obs = env_node.num_obs,
-        num_critic_obs = env_node.num_privileged_obs,
-        num_actions= env_node.num_actions,
-        obs_segments= env_node.obs_segments,
-        privileged_obs_segments= env_node.privileged_obs_segments,
-        **config_dict["policy"],
-    )
-    # load the model with the latest checkpoint
-    model_names = [i for i in os.listdir(args.logdir) if i.startswith("model_")]
-    model_names.sort(key= lambda x: int(x.split("_")[-1].split(".")[0]))
-    state_dict = torch.load(osp.join(args.logdir, model_names[-1]), map_location= "cpu")
-    model.load_state_dict(state_dict["model_state_dict"])
-    model.to(device)
-    model = model.encoders[0] # the first encoder is the visual encoder
-    env_node.destroy_node()
-
-    visual_node.get_logger().info("Embedding send duration: {:.2f} sec".format(duration))
-    visual_node.register_models(model)
-    if args.loop_mode == "while":
-        rclpy.spin_once(visual_node, timeout_sec= 0.)
-        while rclpy.ok():
-            main_loop_time = time.monotonic()
-            visual_node.main_loop()
-            rclpy.spin_once(visual_node, timeout_sec= 0.)
-            time.sleep(max(0, duration - (time.monotonic() - main_loop_time)))
-    elif args.loop_mode == "timer":
-        visual_node.start_main_loop_timer(duration)
-        rclpy.spin(visual_node)
-
-    visual_node.destroy_node()
-    rclpy.shutdown()
-
-if __name__ == "__main__":
+def main():
+    #1) load args
     import argparse
     parser = argparse.ArgumentParser()
 
@@ -379,5 +320,70 @@ if __name__ == "__main__":
         help= "Select which mode to run the main policy control iteration",
     )
 
-    args = parser.parse_args()
-    main(args)
+    args, unknown = parser.parse_known_args()
+
+    #2) init ros env
+    rclpy.init()
+
+
+    #3) laod config and modify it
+    with open(osp.join(args.logdir,"config.json"), "r") as f:
+        config_dict = json.load(f, object_pairs_hook= OrderedDict)
+
+    device = "cpu"
+    duration = config_dict["sensor"]["forward_camera"]["refresh_duration"] # in sec
+
+    #4) init visual node
+    visual_node = VisualHandlerNode(
+        cfg= json.load(open(osp.join(args.logdir, "config.json"), "r")),
+        cropping= [args.crop_top, args.crop_bottom, args.crop_left, args.crop_right],
+        rs_resolution= (args.width, args.height),
+        rs_fps= args.fps,
+        enable_rgb= args.rgb,
+    )
+
+    #5) load robot node
+    env_node = Ros2RealRobot(
+        "visual_ambotw1",
+        low_cmd_topic= "low_cmd_dryrun", # This node should not publish any command at all
+        cfg= config_dict,
+        model_device= device,
+        robot_class_name= "AmbotW1",
+        dryrun= True, # The robot node in this process should not run at all
+    )
+    #6) load model
+    model = getattr(modules, config_dict["runner"]["policy_class_name"])(
+        num_actor_obs = env_node.num_obs,
+        num_critic_obs = env_node.num_privileged_obs,
+        num_actions= env_node.num_actions,
+        obs_segments= env_node.obs_segments,
+        privileged_obs_segments= env_node.privileged_obs_segments,
+        **config_dict["policy"],
+    )
+    # load the model with the latest checkpoint
+    model_names = [i for i in os.listdir(args.logdir) if i.startswith("model_")]
+    model_names.sort(key= lambda x: int(x.split("_")[-1].split(".")[0]))
+    state_dict = torch.load(osp.join(args.logdir, model_names[-1]), map_location= "cpu")
+    model.load_state_dict(state_dict["model_state_dict"])
+    model.to(device)
+    model = model.encoders[0] # the first encoder is the visual encoder
+    env_node.destroy_node()
+
+    visual_node.get_logger().info("Embedding send duration: {:.2f} sec".format(duration))
+    visual_node.register_models(model)
+    if args.loop_mode == "while":
+        rclpy.spin_once(visual_node, timeout_sec= 0.)
+        while rclpy.ok():
+            main_loop_time = time.monotonic()
+            visual_node.main_loop()
+            rclpy.spin_once(visual_node, timeout_sec= 0.)
+            time.sleep(max(0, duration - (time.monotonic() - main_loop_time)))
+    elif args.loop_mode == "timer":
+        visual_node.start_main_loop_timer(duration)
+        rclpy.spin(visual_node)
+
+    visual_node.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == "__main__":
+    main()

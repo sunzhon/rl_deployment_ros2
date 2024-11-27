@@ -1,6 +1,10 @@
 import rclpy
 from rclpy.node import Node
-from real_robot import Ros2RealRobot, get_euler_xyz
+
+if __name__ == "__main__":
+    from real_robot import Ros2RealRobot, get_euler_xyz
+else:
+    from rlcontroller.real_robot import Ros2RealRobot, get_euler_xyz
 
 import os
 import os.path as osp
@@ -80,22 +84,37 @@ class AmbotNode(Ros2RealRobot):
             # )
 
 @torch.inference_mode()
-def main(args):
+def main():
+    
+    #1) load params
+    import argparse
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument("--logdir", type= str, default= None, help= "The directory which contains the config.json and model_*.pt files")
+    parser.add_argument("--nodryrun", action= "store_true", default= True, help= "Disable dryrun mode")
+    parser.add_argument("--loop_mode", type= str, default= "timer",
+        choices= ["while", "timer"],
+        help= "Select which mode to run the main policy control iteration",
+    )
+    args, unknown = parser.parse_known_args()
+
+    #2) init ros env
     rclpy.init()
-    package_path=osp.dirname(osp.dirname(osp.abspath(__file__)))
+
+    #3) find model logs
     assert args.logdir is not None, "Please provide a logdir"
-    args.logdir = osp.join(package_path,"config/policies",args.logdir)
     with open(osp.join(args.logdir,"config.json"), "r") as f:
         config_dict = json.load(f, object_pairs_hook= OrderedDict)
     
-    # modify the config_dict if needed
+    #4) modify the config_dict if needed
     config_dict["control"]["computer_clip_torque"] = True
     
     duration = config_dict["sim"]["dt"] * config_dict["control"]["decimation"] # in sec
     device = "cpu"
 
+    #5) create env node
     env_node = AmbotNode(
-        namespace="ambotw1_ns",
+        namespace="/ambotw1_ns",
         robot_class_name="AmbotW1",
         # low_cmd_topic= "low_cmd_dryrun", # for the dryrun safety
         cfg= config_dict,
@@ -104,6 +123,7 @@ def main(args):
         dryrun= not args.nodryrun,
     )
 
+    #6) load model
     model = getattr(modules, config_dict["runner"]["policy_class_name"])(
         num_actor_obs = env_node.num_obs,
         num_critic_obs = env_node.num_privileged_obs,
@@ -132,16 +152,19 @@ def main(args):
     # magically modify the model to use the components other than the forward depth encoders
     memory_a = model.memory_a
     mlp = model.actor
+
     @torch.jit.script
     def policy(obs: torch.Tensor):
         rnn_embedding = memory_a(obs)
         action = mlp(rnn_embedding)
         return action
-    if hasattr(model, "replace_state_prob"):
+
+    if hasattr(model, "state_estimator") and not hasattr(model, "state_estimator"):
         # the case where lin_vel is estimated by the state estimator
         memory_s = model.memory_s
         estimator = model.state_estimator
         rnn_policy = policy
+
         @torch.jit.script
         def policy(obs: torch.Tensor):
             estimator_input = obs[:, 3:48]
@@ -149,13 +172,40 @@ def main(args):
             estimated_state = estimator(memory_s_embedding)
             obs[:, :3] = estimated_state
             return rnn_policy(obs)
-    
+
+    if hasattr(model, "encoders") and hasattr(model, "state_estimator"):
+        encoder = model.encoders[0]
+        memory_s = model.memory_s
+        estimator = model.state_estimator
+        rnn_policy = policy
+
+        @torch.jit.script
+        def policy(obs: torch.Tensor):
+            encoder_obs = obs[:, 48:]
+            encoder_obs = encoder(encoder_obs)
+
+            estimator_input = obs[:, 3:48]
+            memory_s_embedding = memory_s(estimator_input)
+            estimated_state = estimator(memory_s_embedding)
+            obs[:, :3] = estimated_state
+
+            rnn_policy_input = torch.cat([obs[:,:48], encoder_obs],dim=-1)
+
+            rnn_embedding = memory_a(rnn_policy_input)
+            action = mlp(rnn_embedding)
+
+            return action
+
+    # resgiter models and policy
     env_node.register_models(
         zero_act_model,
         model,
         policy,
     )
+    # start ros
     env_node.start_ros_handlers()
+
+    #main loop
     if args.loop_mode == "while":
         rclpy.spin_once(env_node, timeout_sec= 0.)
         env_node.get_logger().info("Model and Policy are ready")
@@ -172,14 +222,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    
-    parser.add_argument("--logdir", type= str, default= None, help= "The directory which contains the config.json and model_*.pt files")
-    parser.add_argument("--nodryrun", action= "store_true", default= True, help= "Disable dryrun mode")
-    parser.add_argument("--loop_mode", type= str, default= "timer",
-        choices= ["while", "timer"],
-        help= "Select which mode to run the main policy control iteration",
-    )
-    args = parser.parse_args()
-    main(args)
+    main()

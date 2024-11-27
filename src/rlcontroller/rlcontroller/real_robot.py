@@ -187,12 +187,12 @@ class Ros2RealRobot(Node):
         self.NUM_DOF = getattr(RobotCfgs, robot_class_name).NUM_DOF
         self.NUM_ACTIONS = getattr(RobotCfgs, robot_class_name).NUM_ACTIONS
         self.namespace = namespace
-        self.low_state_topic = namespace+low_state_topic
-        # Generate a unique cmd topic so that the low_cmd will not send to the robot's motor.
-        self.low_cmd_topic = namespace+low_cmd_topic #if not dryrun else low_cmd_topic + "_dryrun_" + str(np.random.randint(0, 65535))
-        self.joy_stick_topic = "".join([namespace, joy_stick_topic])
-        self.forward_depth_topic = None if forward_depth_topic is None else "".join([namespace, forward_depth_topic])
-        self.forward_depth_embedding_topic = "".join([namespace, forward_depth_embedding_topic])
+
+        self.low_state_topic = low_state_topic if namespace is None else namespace+low_state_topic
+        self.low_cmd_topic = low_cmd_topic if namespace is None else namespace+low_cmd_topic   #if not dryrun else low_cmd_topic + "_dryrun_" + str(np.random.randint(0, 65535))
+        self.joy_stick_topic = joy_stick_topic if namespace is None else namespace + joy_stick_topic
+        self.forward_depth_topic = forward_depth_topic if namespace is None else (None if forward_depth_topic is None else namespace + forward_depth_topic)
+        self.forward_depth_embedding_topic =  forward_depth_embedding_topic if namespace is None else (None if forward_depth_embedding_topic is None else namespace + forward_depth_embedding_topic)
         self.cfg = cfg
 
         self.lin_vel_deadband = lin_vel_deadband
@@ -315,6 +315,7 @@ class Ros2RealRobot(Node):
             self.low_cmd_topic,
             qos_profile
         )
+
         self.low_cmd_buffer = Action()
         self.low_cmd_buffer.motor_action = [MotorAction()]*self.num_actions
         self.low_cmd_buffer.motor_num=self.num_actions
@@ -437,7 +438,7 @@ class Ros2RealRobot(Node):
         return self.dof_vel_
 
     def _get_last_actions_obs(self):
-        return self.actions
+        return self.actions.view(1,self.NUM_DOF)
 
     def _get_forward_depth_embedding_obs(self):
         return self.forward_depth_embedding_buffer
@@ -453,7 +454,7 @@ class Ros2RealRobot(Node):
 
     def _get_height_measurements_obs(self):
         print("warning, height measurement is not valid on real robot")
-        return torch.zeros(1, len(self.cfg["terrain"]["measured_points_x"]), len(self.cfg["terrain"]["measured_points_y"]))
+        return torch.zeros(1, len(self.cfg["terrain"]["measured_points_x"]), len(self.cfg["terrain"]["measured_points_y"])).view(1,-1)
 
     def get_num_obs_from_components(self, components):
         obs_segments = self.get_obs_segment_from_components(components)
@@ -529,7 +530,11 @@ class Ros2RealRobot(Node):
             else:
                 obs_component_value = getattr(self, "_get_" + k + "_obs")() * self.obs_scales.get(k, 1.0)
             obs_buffer.append(obs_component_value)
-        obs_buffer = torch.cat(obs_buffer, dim=1)
+        try:
+            obs_buffer = torch.cat(obs_buffer, dim=1)
+        except Exception as e:
+            import pdb;pdb.set_trace()
+
         obs_buffer = torch.clamp(obs_buffer, -self.clip_obs, self.clip_obs)
         return obs_buffer
     """ Done: refresh observation buffer and corresponding sub-functions """

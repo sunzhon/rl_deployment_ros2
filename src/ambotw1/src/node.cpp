@@ -79,14 +79,16 @@ void RobotRosNode::action_timer_callback() // for peroidic publish data
 
 
 void RobotRosNode::action_callback(ambot_msgs::msg::Action::SharedPtr data) const{
-	std::cout<<motor_num<<std::endl;
+	//std::cout<<motor_num<<std::endl;
 	assert(this->motor_num==data->motor_num);
 	for (int i = 0; i < data->motor_num; i++){
+		action_ptr->motor_action[i].id = data->motor_action[i].id;
+		action_ptr->motor_action[i].mode = data->motor_action[i].mode;
 		action_ptr->motor_action[i].q = data->motor_action[i].q;
 		action_ptr->motor_action[i].dq = data->motor_action[i].dq;
 		action_ptr->motor_action[i].tau = data->motor_action[i].tau;
-		action_ptr->motor_action[i].kp = 1;//data->motor_action[i].kp;
-		action_ptr->motor_action[i].kd = 0.1;//data->motor_action[i].kd;
+		action_ptr->motor_action[i].kp = data->motor_action[i].kp;
+		action_ptr->motor_action[i].kd = data->motor_action[i].kd;
 	}
 	RCLCPP_DEBUG(this->get_logger(), "receiving action");
 }
@@ -130,7 +132,8 @@ void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  
 	MotorData data;
 	assert(motor_num==action->motor_num);
 
-	// NOTE. replace this
+	std::cout <<  " only enable a motor"<<std::endl;
+	//NOTE. replace this
 	//for(uint8_t idx=0;idx<action->motor_num;idx++){
 	for(uint8_t idx=0;idx<1;idx++){
 		//fill and send cmd to motors
@@ -139,8 +142,8 @@ void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  
 		cmd.mode = queryMotorMode(MotorType::GO_M8010_6,MotorMode::FOC);
 		if(action->motor_action[idx].id>0){
 			cmd.id   = action->motor_action[idx].id;
-			cmd.kp   = action->motor_action[idx].kp;
-			cmd.kd   = action->motor_action[idx].kd;
+			cmd.kp   = 0.01*action->motor_action[idx].kp; // NOTE
+			cmd.kd   = 0.1*action->motor_action[idx].kd;
 			cmd.q    = action->motor_action[idx].q * queryGearRatio(MotorType::GO_M8010_6);
 			cmd.dq   = action->motor_action[idx].dq * queryGearRatio(MotorType::GO_M8010_6);
 			cmd.tau  = action->motor_action[idx].tau/queryGearRatio(MotorType::GO_M8010_6);
@@ -152,6 +155,14 @@ void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  
 			cmd.dq = 0.0;
 			cmd.tau = 0.0;
 		}
+		std::cout <<  "cmd.id: "<<  cmd.id <<std::endl;
+		std::cout <<  "cmd.q: "<<  cmd.q<<std::endl;
+		std::cout <<  "cmd.dq: "<<  cmd.dq<<std::endl;
+		std::cout <<  "cmd.kp: "<<  cmd.kp<<std::endl;
+		std::cout <<  "cmd.kd: "<<  cmd.kd<<std::endl;
+		std::cout <<  "cmd.tau: "<<  cmd.tau<<std::endl;
+		std::cout <<  "cmd.mode: "<<  cmd.mode<<std::endl;
+
 		motor_port->sendRecv(&cmd, &data);
 
 		// fetch motor feedbacks
