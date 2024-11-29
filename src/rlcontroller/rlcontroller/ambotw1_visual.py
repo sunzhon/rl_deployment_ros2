@@ -132,7 +132,7 @@ class VisualHandlerNode(Node):
             # NOTE: simply because realsense's camera_info does not match our network input.
             # It is easier to compute this way.
             self.camera_info_msg = CameraInfo()
-            self.camera_info_msg.header.frame_id = "d435_sim_depth_link"
+            self.camera_info_msg.header.frame_id = "d456_sim_depth_link"
             self.camera_info_msg.height = self.output_resolution[0]
             self.camera_info_msg.width = self.output_resolution[1]
             self.camera_info_msg.distortion_model = "plumb_bob"
@@ -206,7 +206,7 @@ class VisualHandlerNode(Node):
             ]
             rgb_image_msg = rnp.msgify(Image, rgb_image_np, encoding= "rgb8")
             rgb_image_msg.header.stamp = self.get_clock().now().to_msg()
-            rgb_image_msg.header.frame_id = "d435_sim_depth_link"
+            rgb_image_msg.header.frame_id = "d456_sim_depth_link"
             self.rgb_pub.publish(rgb_image_msg)
             self.get_logger().info("rgb image published", once= True)
         
@@ -214,9 +214,10 @@ class VisualHandlerNode(Node):
         for rs_filter in self.rs_filters:
             depth_frame = rs_filter.process(depth_frame)
         depth_image_np = np.asanyarray(depth_frame.get_data())
-        # rotate 180 degree because d435i on h1 head is mounted inverted
+
+        # rotate 180 degree because d456 on h1 head is mounted inverted
         depth_image_np = np.rot90(depth_image_np, k= 2) # k = 2 for rotate 90 degree twice
-        depth_image_pyt = torch.from_numpy(depth_image_np.astype(np.float32)).unsqueeze(0).unsqueeze(0)
+        #depth_image_pyt = torch.from_numpy(depth_image_np.astype(np.float32)).unsqueeze(0).unsqueeze(0)
         
         # apply torch filters
         depth_image_pyt = depth_image_pyt[:, :,
@@ -238,7 +239,7 @@ class VisualHandlerNode(Node):
 
         depth_input_msg = rnp.msgify(Image, depth_input_data, encoding= "16UC1")
         depth_input_msg.header.stamp = self.get_clock().now().to_msg()
-        depth_input_msg.header.frame_id = "d435_sim_depth_link"
+        depth_input_msg.header.frame_id = "d456_sim_depth_link"
         self.depth_input_pub.publish(depth_input_msg)
         self.get_logger().info("depth input published", once= True)
 
@@ -351,6 +352,7 @@ def main():
         robot_class_name= "AmbotW1",
         dryrun= True, # The robot node in this process should not run at all
     )
+
     #6) load model
     model = getattr(modules, config_dict["runner"]["policy_class_name"])(
         num_actor_obs = env_node.num_obs,
@@ -360,17 +362,21 @@ def main():
         privileged_obs_segments= env_node.privileged_obs_segments,
         **config_dict["policy"],
     )
-    # load the model with the latest checkpoint
+
+    #7) load the model with the latest checkpoint
     model_names = [i for i in os.listdir(args.logdir) if i.startswith("model_")]
     model_names.sort(key= lambda x: int(x.split("_")[-1].split(".")[0]))
     state_dict = torch.load(osp.join(args.logdir, model_names[-1]), map_location= "cpu")
     model.load_state_dict(state_dict["model_state_dict"])
     model.to(device)
+    # get pro visual encoder model
     model = model.encoders[0] # the first encoder is the visual encoder
     env_node.destroy_node()
 
     visual_node.get_logger().info("Embedding send duration: {:.2f} sec".format(duration))
     visual_node.register_models(model)
+
+    #8) main loop
     if args.loop_mode == "while":
         rclpy.spin_once(visual_node, timeout_sec= 0.)
         while rclpy.ok():
