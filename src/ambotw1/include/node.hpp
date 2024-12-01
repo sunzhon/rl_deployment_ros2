@@ -31,13 +31,21 @@ class Robot
 		~Robot(void);
 		void init_robot(std::string motor_device, std::string imu_device);
 		void move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action, std::shared_ptr<ambot_msgs::msg::State>& state);
+		void get_motor_cmds(const std::shared_ptr<ambot_msgs::msg::Action>& action, std::shared_ptr<ambot_msgs::msg::Action>& motor_cmds);
+		void get_joint_state(const std::shared_ptr<ambot_msgs::msg::State>& motor_fdbk, std::shared_ptr<ambot_msgs::msg::State>& state);
 		void read_imu(std::shared_ptr<ambot_msgs::msg::State>& state);
 		bool motor_enabled;
 		bool imu_enabled;
-		std::shared_ptr<yesense::YesenseDriver> imu;
 		int motor_num;
+
+		std::shared_ptr<yesense::YesenseDriver> imu;
 	private:
-		std::shared_ptr<SerialPort> motor_port;
+		// motors and imu objects
+		std::shared_ptr<SerialPort> motors;
+
+		// motors
+		std::shared_ptr<ambot_msgs::msg::State> motor_fdbk;
+		std::shared_ptr<ambot_msgs::msg::Action> motor_cmds;
 		// imu
 		protocol_info_t imu_data;
 
@@ -62,6 +70,8 @@ class RobotRosNode : public rclcpp::Node, public Robot
 
 		std::shared_ptr<ambot_msgs::msg::State> state_ptr;
 		std::shared_ptr<ambot_msgs::msg::Action> action_ptr;
+
+
 		std::vector<std::string> devices;
 
 };

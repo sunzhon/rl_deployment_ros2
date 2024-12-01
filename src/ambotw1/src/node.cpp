@@ -98,18 +98,49 @@ void RobotRosNode::action_callback(ambot_msgs::msg::Action::SharedPtr data) cons
 Robot::Robot(void){
 	motor_enabled = false;
 	imu_enabled = false;
+	motor_cmds = std::make_shared<ambot_msgs::msg::Action>();
+	motor_fdbk = std::make_shared<ambot_msgs::msg::State>();
 }
 
 void Robot::init_robot(std::string motor_device, std::string imu_device){
-	
+
 	// open motor device
 	if(!motor_device.empty()){
 		try {
 			if(access(motor_device.c_str(),0)!=F_OK){
 				throw std::runtime_error("Error: " + motor_device + " does not exist.");
 			}
-			motor_port = std::make_shared<SerialPort>(motor_device.c_str());
+			motors = std::make_shared<SerialPort>(motor_device.c_str());
 			std::cout <<  "Sucessfully open motor device"<<  std::endl;
+
+			// scan motors
+			// /*
+			//  Do something to scan all connected motors 
+			//
+			// */
+
+			motor_cmds->motor_num=0;
+			for(uint8_t id=1;id<20;id++){
+				MotorCmd cmd;
+				MotorData data;
+				data.motorType = MotorType::GO_M8010_6;
+				cmd.motorType = MotorType::GO_M8010_6;
+				cmd.mode = queryMotorMode(MotorType::GO_M8010_6,MotorMode::FOC);
+				cmd.id = id;
+				motors->sendRecv(&cmd, &data);
+				if(data.motor_id==id){
+					motor_cmds->motor_num++;
+				}else{
+					break;
+				}
+			}
+
+			motor_cmds->motor_action.resize(motor_cmds->motor_num);
+			motor_fdbk->motor_num = motor_cmds->motor_num;
+			motor_fdbk->motor_state.resize(motor_cmds->motor_num);
+
+			printf("Found %i motors\n",motor_cmds->motor_num);
+
 		} catch (const std::exception& e) {
 			std::cerr << e.what() << std::endl;
 		}
@@ -128,25 +159,29 @@ void Robot::init_robot(std::string motor_device, std::string imu_device){
 void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  std::shared_ptr<ambot_msgs::msg::State>& state)
 {
 
+	//1) assert
 	MotorCmd cmd;
 	MotorData data;
 	assert(motor_num==action->motor_num);
 
-	std::cout <<  " only enable a motor"<<std::endl;
+	//2) interpret joint action to be motor commands
+	get_motor_cmds(action, motor_cmds);
+
+	//3) send motor cmds and get motor feedback
 	//NOTE. replace this
-	//for(uint8_t idx=0;idx<action->motor_num;idx++){
+	//for(uint8_t idx=0;idx<motor_cmds->motor_num;idx++){
 	for(uint8_t idx=0;idx<1;idx++){
 		//fill and send cmd to motors
 		data.motorType = MotorType::GO_M8010_6;
 		cmd.motorType = MotorType::GO_M8010_6;
 		cmd.mode = queryMotorMode(MotorType::GO_M8010_6,MotorMode::FOC);
-		if(action->motor_action[idx].id>0){
-			cmd.id   = action->motor_action[idx].id;
-			cmd.kp   = 0.01*action->motor_action[idx].kp; // NOTE
-			cmd.kd   = 0.1*action->motor_action[idx].kd;
-			cmd.q    = action->motor_action[idx].q * queryGearRatio(MotorType::GO_M8010_6);
-			cmd.dq   = action->motor_action[idx].dq * queryGearRatio(MotorType::GO_M8010_6);
-			cmd.tau  = action->motor_action[idx].tau/queryGearRatio(MotorType::GO_M8010_6);
+		if(motor_cmds->motor_action[idx].id>0){
+			cmd.id   = motor_cmds->motor_action[idx].id;
+			cmd.kp   = motor_cmds->motor_action[idx].kp; 
+			cmd.kd   = motor_cmds->motor_action[idx].kd;
+			cmd.q    = motor_cmds->motor_action[idx].q * queryGearRatio(MotorType::GO_M8010_6);
+			cmd.dq   = motor_cmds->motor_action[idx].dq * queryGearRatio(MotorType::GO_M8010_6);
+			cmd.tau  = motor_cmds->motor_action[idx].tau/queryGearRatio(MotorType::GO_M8010_6);
 		}else{
 			cmd.id = idx+1;
 			cmd.kp = 0.0;
@@ -155,29 +190,58 @@ void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  
 			cmd.dq = 0.0;
 			cmd.tau = 0.0;
 		}
-		std::cout <<  "cmd.id: "<<  cmd.id <<std::endl;
-		std::cout <<  "cmd.q: "<<  cmd.q<<std::endl;
-		std::cout <<  "cmd.dq: "<<  cmd.dq<<std::endl;
-		std::cout <<  "cmd.kp: "<<  cmd.kp<<std::endl;
-		std::cout <<  "cmd.kd: "<<  cmd.kd<<std::endl;
-		std::cout <<  "cmd.tau: "<<  cmd.tau<<std::endl;
-		std::cout <<  "cmd.mode: "<<  cmd.mode<<std::endl;
+		//std::cout <<  "cmd.id: "<<  cmd.id <<std::endl;
+		//std::cout <<  "cmd.q: "<<  cmd.q<<std::endl;
+		//std::cout <<  "cmd.dq: "<<  cmd.dq<<std::endl;
+		//std::cout <<  "cmd.kp: "<<  cmd.kp<<std::endl;
+		//std::cout <<  "cmd.kd: "<<  cmd.kd<<std::endl;
+		//std::cout <<  "cmd.tau: "<<  cmd.tau<<std::endl;
+		//std::cout <<  "cmd.mode: "<<  cmd.mode<<std::endl;
 
-		motor_port->sendRecv(&cmd, &data);
+		motors->sendRecv(&cmd, &data);
 
 		// fetch motor feedbacks
-		state->motor_state[idx].id = data.motor_id;
-		state->motor_state[idx].q = data.q/queryGearRatio(MotorType::GO_M8010_6);
-		state->motor_state[idx].dq = data.dq/queryGearRatio(MotorType::GO_M8010_6);
-		state->motor_state[idx].tau = data.tau*queryGearRatio(MotorType::GO_M8010_6);
-		state->motor_state[idx].temp = data.temp;
-		state->motor_state[idx].merror = data.merror;
+		motor_fdbk->motor_state[idx].id = data.motor_id;
+		motor_fdbk->motor_state[idx].q = data.q/queryGearRatio(MotorType::GO_M8010_6);
+		motor_fdbk->motor_state[idx].dq = data.dq/queryGearRatio(MotorType::GO_M8010_6);
+		motor_fdbk->motor_state[idx].tau = data.tau*queryGearRatio(MotorType::GO_M8010_6);
+		motor_fdbk->motor_state[idx].temp = data.temp;
+		motor_fdbk->motor_state[idx].merror = data.merror;
 		motor_enabled = true;
+
+
 	}
+
+	//4) get joint state
+	get_joint_state(motor_fdbk, state);
 }
 
+void Robot::get_motor_cmds(const std::shared_ptr<ambot_msgs::msg::Action>& action,  std::shared_ptr<ambot_msgs::msg::Action>& motor_cmds){
+
+	for(uint8_t idx=0;idx<motor_cmds->motor_num;idx++){
+		motor_cmds->motor_action[idx].id = action->motor_action[idx].id;
+		motor_cmds->motor_action[idx].q = action->motor_action[idx].q;
+		motor_cmds->motor_action[idx].dq = action->motor_action[idx].dq;
+		motor_cmds->motor_action[idx].kp = 0.01*action->motor_action[idx].kp; //NOTE
+		motor_cmds->motor_action[idx].kd = 0.1*action->motor_action[idx].kd;
+		motor_cmds->motor_action[idx].tau = action->motor_action[idx].tau;
+	}
+
+}
+
+void Robot::get_joint_state(const std::shared_ptr<ambot_msgs::msg::State>& motor_fdbk,  std::shared_ptr<ambot_msgs::msg::State>& state){
+
+	for(uint8_t idx=0;idx<motor_cmds->motor_num;idx++){
+		state->motor_state[idx].id = motor_fdbk->motor_state[idx].id;
+		state->motor_state[idx].q = motor_fdbk->motor_state[idx].q;
+		state->motor_state[idx].dq = motor_fdbk->motor_state[idx].dq;
+		state->motor_state[idx].tau = motor_fdbk->motor_state[idx].tau; 
+		state->motor_state[idx].temp = motor_fdbk->motor_state[idx].temp;
+		state->motor_state[idx].merror = motor_fdbk->motor_state[idx].merror;
+	}
 
 
+}
 
 void Robot::read_imu(std::shared_ptr<ambot_msgs::msg::State>& state){
 
@@ -219,7 +283,7 @@ Robot::~Robot(void){
 		cmd.id   = idx+1; // NOTE: this should be changed 
 		cmd.kp = 0;
 		cmd.kd = 0;
-		motor_port->sendRecv(&cmd, &data);
+		motors->sendRecv(&cmd, &data);
 	}
 
 	std::cout <<  " stop motors " <<  std::endl;
