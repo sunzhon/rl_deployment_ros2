@@ -12,7 +12,7 @@ import torch
 
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
-print(ReliabilityPolicy.__dict__)
+#print(ReliabilityPolicy.__dict__)
 #from rclpy.qos import qos_profile_default, qos_profile_sensor_data
 
 @torch.jit.script
@@ -453,7 +453,8 @@ class Ros2RealRobot(Node):
         )
 
     def _get_height_measurements_obs(self):
-        print("warning, height measurement is not valid on real robot")
+        #print("warning, height measurement is not valid on real robot")
+        # NOTE, this is only for plane terrain
         return torch.zeros(1, len(self.cfg["terrain"]["measured_points_x"]), len(self.cfg["terrain"]["measured_points_y"])).view(1,-1)
 
     def get_num_obs_from_components(self, components):
@@ -469,7 +470,7 @@ class Ros2RealRobot(Node):
         """
         segments = OrderedDict()
         if "lin_vel" in components:
-            print("Warning: lin_vel is not typically available or accurate enough on the real robot. Will return zeros.")
+            print("\033[40m Warning: lin_vel is not typically available or accurate enough on the real robot. Will return zeros.\033[0m")
             segments["lin_vel"] = (3,)
         if "ang_vel" in components:
             segments["ang_vel"] = (3,)
@@ -484,7 +485,7 @@ class Ros2RealRobot(Node):
         if "last_actions" in components:
             segments["last_actions"] = (self.NUM_ACTIONS,)
         if "height_measurements" in components:
-            print("Warning: height_measurements is not typically available on the real robot.")
+            print("\033[40m Warning: height_measurements is not typically available on the real robot.\033[0m")
             segments["height_measurements"] = (1, len(self.cfg["terrain"]["measured_points_x"]), len(self.cfg["terrain"]["measured_points_y"]))
         if "forward_depth" in components:
             if "output_resolution" in self.cfg["sensor"]["forward_camera"]:

@@ -168,9 +168,7 @@ void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  
 	get_motor_cmds(action, motor_cmds);
 
 	//3) send motor cmds and get motor feedback
-	//NOTE. replace this
-	//for(uint8_t idx=0;idx<motor_cmds->motor_num;idx++){
-	for(uint8_t idx=0;idx<1;idx++){
+	for(uint8_t idx=0;idx<motor_cmds->motor_num;idx++){
 		//fill and send cmd to motors
 		data.motorType = MotorType::GO_M8010_6;
 		cmd.motorType = MotorType::GO_M8010_6;
@@ -276,7 +274,7 @@ Robot::~Robot(void){
 	// disable motors
 	MotorCmd cmd;
 	MotorData data;
-	for(uint8_t idx=0; idx<motor_num;idx++){
+	for(uint8_t idx=0; idx<motor_cmds->motor_num;idx++){
 		cmd.motorType = MotorType::GO_M8010_6;
 		data.motorType = MotorType::GO_M8010_6;
 		cmd.mode = queryMotorMode(MotorType::GO_M8010_6,MotorMode::BRAKE);

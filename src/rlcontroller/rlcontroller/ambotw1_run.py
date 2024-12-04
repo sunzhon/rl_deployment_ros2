@@ -51,15 +51,15 @@ class AmbotNode(Ros2RealRobot):
         
     def main_loop(self):
         if (self.joy_stick_buffer.motion_mode==1):
-            self.get_logger().info("Left down button was pressed, using stand policy")
+            self.get_logger().info("Left down button was pressed, using stand policy",throttle_duration_sec=1)
             self.use_stand_policy = True
 
         if (self.joy_stick_buffer.motion_mode==2) and self.use_stand_policy:
-            self.get_logger().info("Right down button was pressed, stop using stand policy")
+            self.get_logger().info("Right down button was pressed, stop using stand policy", throttle_duration_sec=1)
             self.use_stand_policy = False
 
         if (self.joy_stick_buffer.motion_mode==3):
-            self.get_logger().info("Right button 1, reset the policy")
+            self.get_logger().info("Right button 1, reset the policy", throttle_duration_sec=1)
             self.task_model.reset()
 
         if self.use_stand_policy:
@@ -218,6 +218,7 @@ def main():
         env_node.start_main_loop_timer(duration)
         rclpy.spin(env_node)
 
+    env_node.destroy_node()
     rclpy.shutdown()
 
 
