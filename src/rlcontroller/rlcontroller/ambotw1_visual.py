@@ -217,7 +217,7 @@ class VisualHandlerNode(Node):
 
         # rotate 180 degree because d456 on h1 head is mounted inverted
         depth_image_np = np.rot90(depth_image_np, k= 2) # k = 2 for rotate 90 degree twice
-        #depth_image_pyt = torch.from_numpy(depth_image_np.astype(np.float32)).unsqueeze(0).unsqueeze(0)
+        depth_image_pyt = torch.from_numpy(depth_image_np.astype(np.float32)).unsqueeze(0).unsqueeze(0)
         
         # apply torch filters
         depth_image_pyt = depth_image_pyt[:, :,

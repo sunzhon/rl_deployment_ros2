@@ -2,8 +2,17 @@ import launch
 import launch.actions
 import launch.substitutions
 import launch_ros.actions
+import os.path as osp
+from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
+
+    package_share_dir = get_package_share_directory(
+        'rlcontroller')
+    policy_dir = osp.join(osp.dirname(osp.dirname(osp.dirname(osp.dirname(osp.dirname(package_share_dir))))),"legged_policies")
+    policy_path = osp.join(policy_dir,"ambotw1","visual_tag_1")
+    print("policy path:", policy_path)
+
     return launch.LaunchDescription([
         launch_ros.actions.Node(
             package='rlcontroller', 
@@ -11,7 +20,9 @@ def generate_launch_description():
             output='screen',
             node_namespace="/ambotw1_ns",
             node_name="rlcontroller_visual_node",
-            arguments=["--logdir", "/home/ubuntu/workspace/ambot/ambot_parkour/deployment/rl_deployment_ros2/src/rlcontroller/config/policies/tag_1"]
+            arguments=["--logdir", policy_path,
+                '--log-level', 'DEBUG'
+                ]
             )
     ])
 
