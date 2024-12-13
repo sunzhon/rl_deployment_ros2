@@ -30,6 +30,7 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 	// rosparameter
 	this->declare_parameter<std::string>("motor_device", "/dev/M1080");
 	this->declare_parameter<std::string>("imu_device", "/dev/YIS106");
+	this->declare_parameter<std::string>("cyber_device", "/dev/ttyACM0");
 	this->declare_parameter<int>("motor_num", 12);
 
 
@@ -44,10 +45,11 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 	state_ptr->motor_state.resize(this->motor_num);
 
 	// open motor and imu devices
-	devices.resize(2);
+	devices.resize(3);
 	this->get_parameter("motor_device", devices[0]);
 	this->get_parameter("imu_device", devices[1]);
-	this->init_robot(devices[0], devices[1]);
+	this->get_parameter("cyber_device", devices[2]);
+	this->init_robot(devices);
 }
 
 
@@ -102,15 +104,15 @@ Robot::Robot(void){
 	motor_fdbk = std::make_shared<ambot_msgs::msg::State>();
 }
 
-void Robot::init_robot(std::string motor_device, std::string imu_device){
+void Robot::init_robot(std::vector<std::string> devices){
 
-	// open motor device
-	if(!motor_device.empty()){
+	// open unitree motor device
+	if(!devices[0].empty()){
 		try {
-			if(access(motor_device.c_str(),0)!=F_OK){
-				throw std::runtime_error("Error: " + motor_device + " does not exist.");
+			if(access(devices[0].c_str(),0)!=F_OK){
+				throw std::runtime_error("Error: " + devices[0] + " does not exist.");
 			}
-			motors = std::make_shared<SerialPort>(motor_device.c_str());
+			motors = std::make_shared<SerialPort>(devices[0].c_str());
 			std::cout <<  "Sucessfully open motor device"<<  std::endl;
 
 			// scan motors
@@ -149,11 +151,28 @@ void Robot::init_robot(std::string motor_device, std::string imu_device){
 	}
 
 	// open imu device
-	if(!imu_device.empty()){
-		imu = std::make_shared<yesense::YesenseDriver>(imu_device,460800);
+	if(!devices[1].empty()){
+		imu = std::make_shared<yesense::YesenseDriver>(devices[1],460800);
 	}else{
 		std::cout <<  "do not open imu device"<<  std::endl;
 	}
+
+	// open cyber motor device
+	if(!devices[2].empty()){
+		//imu = std::make_shared<yesense::YesenseDriver>(devices[1],460800);
+		std::vector<int> ids;
+		ids.resize(1);
+		ids[0]=0x7f;
+		//cybergear = std::make_shared<CyberGearCan>(devices[2], 115200, ids);
+	//move(uint8_t motor_id, float kp, float kd, float torque, float pos, float vel){
+	//cybergear->move(ids[0], 1.0,  0.02,  0.0, 0.5, 0.0);
+	//sleep(3);// move 3 seconds
+	//cybergear->stop();
+
+	}else{
+		std::cout <<  "do not open cyber device"<<  std::endl;
+	}
+
 }
 
 void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  std::shared_ptr<ambot_msgs::msg::State>& state)

@@ -13,6 +13,7 @@ def generate_launch_description():
             parameters=[
                 {"motor_device": "/dev/M1080"},
                 {"imu_device": "/dev/YIS106"},
+                {"cyber_device": "/dev/ttyACM0"},
                 {"motor_num": 12},
             ]
         )

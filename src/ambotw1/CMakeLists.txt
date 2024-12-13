@@ -24,14 +24,32 @@ find_package(serial REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread)
 
 
+# include external project of cybergear sdk
+include(ExternalProject)
+ExternalProject_Add(
+    cybergear_sdk
+    GIT_REPOSITORY https://github.com/sunzhon/cybergear_motor_sdk.git
+    GIT_TAG master  # 可选择分支或特定版本
+    PREFIX ${CMAKE_BINARY_DIR}/_deps
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/install
+    #CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    #INSTALL_COMMAND ""  # Disable the install command
+)
+
+set(CYBERGEAR_ROOT ${CMAKE_BINARY_DIR}/_deps/src/cybergear_sdk)
+set(CYBERGEAR_BUILD ${CYBERGEAR_ROOT}-build)
+message("CYBERGEAR_BUILD: ${CYBERGEAR_BUILD}")
+
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 include_directories(include ${colcon_INCLUDE_DIRS}   ${Boost_INCLUDE_DIRS})
 
+# include unitree motor
 set(LIB_PATH "${CMAKE_SOURCE_DIR}/lib")
 link_directories(${LIB_PATH})
+message("lib: ${LIB_PATH}")
 
 if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64") 
     set(EXTRA_LIBS libUnitreeMotorSDK_Arm64.so)
@@ -57,7 +75,12 @@ message(" $ENV{LD_LIBRARY_PATH}")
 
 add_executable(${PROJECT_NAME}_node src/main.cpp src/node.cpp src/yesense.cpp src/analysis_data.cpp)
 
-target_link_libraries(${PROJECT_NAME}_node "${LIB_PATH}/${EXTRA_LIBS}" ${Boost_LIBRARIES} Boost::thread Boost::system)
+target_link_libraries(${PROJECT_NAME}_node "${LIB_PATH}/${EXTRA_LIBS}" ${Boost_LIBRARIES} Boost::thread Boost::system "${CYBERGEAR_BUILD}/install/lib/libcybergear_sdk.so")
+
+target_include_directories(${PROJECT_NAME}_node PRIVATE ${CYBERGEAR_BUILD}/install/include/include)
+
+# 在你的目标编译时，确保这个外部库已编译完成
+add_dependencies(${PROJECT_NAME}_node cybergear_sdk)
 
 ament_target_dependencies(${PROJECT_NAME}_node rclcpp std_msgs ambot_msgs serial )
 
@@ -74,6 +97,9 @@ install(TARGETS
 
 
 install(FILES ${LIB_PATH}/${EXTRA_LIBS}
+        DESTINATION lib)
+
+install(FILES  "${CYBERGEAR_BUILD}/install/lib/libcybergear_sdk.so"
         DESTINATION lib)
 
 

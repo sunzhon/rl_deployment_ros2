@@ -13,6 +13,7 @@
 
 #include <unistd.h>
 #include "serialPort/SerialPort.h"
+#include "can_usb.hpp"
 #include "unitreeMotor/unitreeMotor.h"
 #include "yesense.hpp"
 
@@ -29,7 +30,7 @@ class Robot
 	public:
 		Robot();
 		~Robot(void);
-		void init_robot(std::string motor_device, std::string imu_device);
+		void init_robot(std::vector<std::string> devices);
 		void move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action, std::shared_ptr<ambot_msgs::msg::State>& state);
 		void get_motor_cmds(const std::shared_ptr<ambot_msgs::msg::Action>& action, std::shared_ptr<ambot_msgs::msg::Action>& motor_cmds);
 		void get_joint_state(const std::shared_ptr<ambot_msgs::msg::State>& motor_fdbk, std::shared_ptr<ambot_msgs::msg::State>& state);
@@ -39,6 +40,7 @@ class Robot
 		int motor_num;
 
 		std::shared_ptr<yesense::YesenseDriver> imu;
+		std::shared_ptr<CyberGearCan> cybergear;
 	private:
 		// motors and imu objects
 		std::shared_ptr<SerialPort> motors;
