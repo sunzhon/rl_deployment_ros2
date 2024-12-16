@@ -21,7 +21,8 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(ambot_msgs REQUIRED)
 find_package(serial REQUIRED)
-find_package(Boost REQUIRED COMPONENTS system thread)
+find_package(Boost REQUIRED COMPONENTS system thread chrono)
+
 
 
 # include external project of cybergear sdk

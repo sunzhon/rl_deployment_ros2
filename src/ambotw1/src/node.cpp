@@ -159,7 +159,6 @@ void Robot::init_robot(std::vector<std::string> devices){
 
 	// open cyber motor device
 	if(!devices[2].empty()){
-		//imu = std::make_shared<yesense::YesenseDriver>(devices[1],460800);
 		std::vector<int> ids;
 		ids.resize(1);
 		ids[0]=0x7f;
@@ -202,7 +201,7 @@ void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  
 		}else{
 			cmd.id = idx+1;
 			cmd.kp = 0.0;
-			cmd.kd = -0.05;
+			cmd.kd = 0.1;
 			cmd.q = 0.0;
 			cmd.dq = 0.0;
 			cmd.tau = 0.0;
@@ -239,8 +238,8 @@ void Robot::get_motor_cmds(const std::shared_ptr<ambot_msgs::msg::Action>& actio
 		motor_cmds->motor_action[idx].id = action->motor_action[idx].id;
 		motor_cmds->motor_action[idx].q = action->motor_action[idx].q;
 		motor_cmds->motor_action[idx].dq = action->motor_action[idx].dq;
-		motor_cmds->motor_action[idx].kp = 0.01*action->motor_action[idx].kp; //NOTE
-		motor_cmds->motor_action[idx].kd = 0.1*action->motor_action[idx].kd;
+		motor_cmds->motor_action[idx].kp = action->motor_action[idx].kp; 
+		motor_cmds->motor_action[idx].kd = action->motor_action[idx].kd;
 		motor_cmds->motor_action[idx].tau = action->motor_action[idx].tau;
 	}
 
