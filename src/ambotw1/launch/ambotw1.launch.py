@@ -1,11 +1,12 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
+import os
+from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
-
-    ld = LaunchDescription()
+    robot="ambotw1"
     config = os.path.join(
-        get_package_share_directory('ambotw1'),
+        FindPackageShare(package=robot).find(robot),
         'config',
         'params.yaml'
         )

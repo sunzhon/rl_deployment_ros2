@@ -32,13 +32,18 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 	this->declare_parameter<std::string>("imu_device", "/dev/YIS106");
 	this->declare_parameter<std::string>("cyber_device", "/dev/ttyACM0");
 	this->declare_parameter<int>("motor_num", 12);
-
+	this->get_parameter("motor_num", this->motor_num);
+	for(uint8_t idx=0;idx<motor_num; idx++){
+	this->declare_parameter<float>("realrobot_joint_limits_high_"+std::to_string(idx), 0.0);
+	this->declare_parameter<float>("realrobot_joint_limits_low_"+std::to_string(idx), 0.0);
+	this->declare_parameter<float>("simrobot_joint_limits_high_"+std::to_string(idx), 0.0);
+	this->declare_parameter<float>("simrobot_joint_limits_low_"+std::to_string(idx), 0.0);
+	}
 
 	action_ptr = std::make_shared<ambot_msgs::msg::Action>();
 	state_ptr = std::make_shared<ambot_msgs::msg::State>();
 
 	// init state and action msg buffer
-	this->get_parameter("motor_num", this->motor_num);
 	action_ptr->motor_num = this->motor_num;
 	action_ptr->motor_action.resize(this->motor_num);
 	state_ptr->motor_num = this->motor_num;
@@ -54,23 +59,23 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 	// get sim real translation params
 	realrobot_joint_limits.resize(motor_num);
 	simrobot_joint_limits.resize(motor_num);
-	torealrobot_params.resize(motor_num);
-	tosimrobot_params.resize(motor_num);
+	real_params.resize(motor_num);
+	sim_params.resize(motor_num);
 	for(uint8_t idx=0;idx<motor_num;idx++){
 		realrobot_joint_limits.at(idx).resize(2);
 		simrobot_joint_limits.at(idx).resize(2);
-		rorealrobot_params.at(idx).resize(2);
-		rosimrobot_params.at(idx).resize(2);
+		real_params.at(idx).resize(2);
+		sim_params.at(idx).resize(2);
 
 		this->get_parameter("realrobot_joint_limits_high_"+std::to_string(idx), realrobot_joint_limits[idx][0]);
 		this->get_parameter("realrobot_joint_limits_low_"+std::to_string(idx), realrobot_joint_limits[idx][1]);
 		this->get_parameter("simrobot_joint_limits_high_"+std::to_string(idx), simrobot_joint_limits[idx][0]);
 		this->get_parameter("simrobot_joint_limits_low_"+std::to_string(idx), simrobot_joint_limits[idx][1]);
 
-		torealrobot_params.at(idx)[0] = (realrobot_joint_limits.at(idx)[0]- realrobot_joint_limits.at(idx)[1])/(simrobot_joint_limits.at(idx)[0]-simrobot_joint_limits.at(idx)[1]);
-		torealrobot_params.at(idx)[1] = realrobot_joint_limits.at(idx)[0] - simrobot_joint_limits[0] * torealrobot_params.at(idx)[0];
-		tosimrobot_params.at(idx)[0] = (simlrobot_joint_limits.at(idx)[0]- simrobot_joint_limits.at(idx)[1])/(realrobot_joint_limits.at(idx)[0]-realrobot_joint_limits.at(idx)[1]);
-		tosimrobot_params.at(idx)[1] = simlrobot_joint_limits.at(idx)[0] - realrobot_joint_limits[0] * tosimrobot_params.at(idx)[0];
+		real_params.at(idx)[0] = (realrobot_joint_limits.at(idx)[0]- realrobot_joint_limits.at(idx)[1])/(simrobot_joint_limits.at(idx)[0]-simrobot_joint_limits.at(idx)[1]);
+		real_params.at(idx)[1] = realrobot_joint_limits.at(idx)[0] - simrobot_joint_limits.at(idx)[0] * real_params.at(idx)[0];
+		sim_params.at(idx)[0] = (simrobot_joint_limits.at(idx)[0]- simrobot_joint_limits.at(idx)[1])/(realrobot_joint_limits.at(idx)[0]-realrobot_joint_limits.at(idx)[1]);
+		sim_params.at(idx)[1] = simrobot_joint_limits.at(idx)[0] - realrobot_joint_limits.at(idx)[0] * sim_params.at(idx)[0];
 	}
 
 
@@ -263,7 +268,7 @@ void Robot::get_motor_cmds(const std::shared_ptr<ambot_msgs::msg::Action>& actio
 
 	for(uint8_t idx=0;idx<motor_cmds->motor_num;idx++){
 		motor_cmds->motor_action[idx].id = action->motor_action[idx].id;
-		motor_cmds->motor_action[idx].q = torealrobot_params[idx][0] *action->motor_action[idx].q + torealrobot_params[idx][1];
+		motor_cmds->motor_action[idx].q = real_params[idx][0] *action->motor_action[idx].q + real_params[idx][1];
 		motor_cmds->motor_action[idx].dq = action->motor_action[idx].dq;
 		motor_cmds->motor_action[idx].kp = action->motor_action[idx].kp; 
 		motor_cmds->motor_action[idx].kd = action->motor_action[idx].kd;
@@ -276,7 +281,7 @@ void Robot::get_joint_state(const std::shared_ptr<ambot_msgs::msg::State>& motor
 
 	for(uint8_t idx=0;idx<motor_cmds->motor_num;idx++){
 		state->motor_state[idx].id = motor_fdbk->motor_state[idx].id;
-		state->motor_state[idx].q = tosimrobot_params[idx][0] * motor_fdbk->motor_state[idx].q + tosimrobot_params[idx][1];
+		state->motor_state[idx].q = sim_params[idx][0] * motor_fdbk->motor_state[idx].q + sim_params[idx][1];
 		state->motor_state[idx].dq = motor_fdbk->motor_state[idx].dq;
 		state->motor_state[idx].tau = motor_fdbk->motor_state[idx].tau; 
 		state->motor_state[idx].temp = motor_fdbk->motor_state[idx].temp;

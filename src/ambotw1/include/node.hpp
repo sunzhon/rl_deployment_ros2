@@ -44,9 +44,9 @@ class Robot
 
 
 		std::vector<std::vector<float>> realrobot_joint_limits;
-	std::vector<std::vector<float>> simrobot_joint_limits;
-	std::vector<std::vector<float>> torealrobot_params;
-	std::vector<std::vector<float>> tosimrobot_params;
+		std::vector<std::vector<float>> simrobot_joint_limits;
+		std::vector<std::vector<float>> real_params;
+		std::vector<std::vector<float>> sim_params;
 
 	private:
 		// motors and imu objects

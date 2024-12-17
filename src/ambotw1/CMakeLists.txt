@@ -32,9 +32,12 @@ ExternalProject_Add(
     GIT_REPOSITORY https://github.com/sunzhon/cybergear_motor_sdk.git
     GIT_TAG master  # 可选择分支或特定版本
     PREFIX ${CMAKE_BINARY_DIR}/_deps
+    SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/src/cybergear_sdk
+    BINARY_DIR ${CMAKE_BINARY_DIR}/_deps/src/cybergear_sdk-build
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/install
     #CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     #INSTALL_COMMAND ""  # Disable the install command
+    UPDATE_COMMAND "" #prevent update step
 )
 
 set(CYBERGEAR_ROOT ${CMAKE_BINARY_DIR}/_deps/src/cybergear_sdk)
