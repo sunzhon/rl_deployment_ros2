@@ -50,6 +50,31 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 	this->get_parameter("imu_device", devices[1]);
 	this->get_parameter("cyber_device", devices[2]);
 	this->init_robot(devices);
+
+	// get sim real translation params
+	realrobot_joint_limits.resize(motor_num);
+	simrobot_joint_limits.resize(motor_num);
+	torealrobot_params.resize(motor_num);
+	tosimrobot_params.resize(motor_num);
+	for(uint8_t idx=0;idx<motor_num;idx++){
+		realrobot_joint_limits.at(idx).resize(2);
+		simrobot_joint_limits.at(idx).resize(2);
+		rorealrobot_params.at(idx).resize(2);
+		rosimrobot_params.at(idx).resize(2);
+
+		this->get_parameter("realrobot_joint_limits_high_"+std::to_string(idx), realrobot_joint_limits[idx][0]);
+		this->get_parameter("realrobot_joint_limits_low_"+std::to_string(idx), realrobot_joint_limits[idx][1]);
+		this->get_parameter("simrobot_joint_limits_high_"+std::to_string(idx), simrobot_joint_limits[idx][0]);
+		this->get_parameter("simrobot_joint_limits_low_"+std::to_string(idx), simrobot_joint_limits[idx][1]);
+
+		torealrobot_params.at(idx)[0] = (realrobot_joint_limits.at(idx)[0]- realrobot_joint_limits.at(idx)[1])/(simrobot_joint_limits.at(idx)[0]-simrobot_joint_limits.at(idx)[1]);
+		torealrobot_params.at(idx)[1] = realrobot_joint_limits.at(idx)[0] - simrobot_joint_limits[0] * torealrobot_params.at(idx)[0];
+		tosimrobot_params.at(idx)[0] = (simlrobot_joint_limits.at(idx)[0]- simrobot_joint_limits.at(idx)[1])/(realrobot_joint_limits.at(idx)[0]-realrobot_joint_limits.at(idx)[1]);
+		tosimrobot_params.at(idx)[1] = simlrobot_joint_limits.at(idx)[0] - realrobot_joint_limits[0] * tosimrobot_params.at(idx)[0];
+	}
+
+
+
 }
 
 
@@ -73,7 +98,6 @@ void RobotRosNode::sensor_timer_callback() // for peroidic publish data
 
 void RobotRosNode::action_timer_callback() // for peroidic publish data
 {
-
 	this->move_motor(action_ptr, state_ptr);
 	this->read_imu(state_ptr);
 	RCLCPP_DEBUG(this->get_logger(), "Moving motors");
@@ -174,6 +198,8 @@ void Robot::init_robot(std::vector<std::string> devices){
 
 }
 
+
+
 void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  std::shared_ptr<ambot_msgs::msg::State>& state)
 {
 
@@ -234,9 +260,10 @@ void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  
 
 void Robot::get_motor_cmds(const std::shared_ptr<ambot_msgs::msg::Action>& action,  std::shared_ptr<ambot_msgs::msg::Action>& motor_cmds){
 
+
 	for(uint8_t idx=0;idx<motor_cmds->motor_num;idx++){
 		motor_cmds->motor_action[idx].id = action->motor_action[idx].id;
-		motor_cmds->motor_action[idx].q = action->motor_action[idx].q;
+		motor_cmds->motor_action[idx].q = torealrobot_params[idx][0] *action->motor_action[idx].q + torealrobot_params[idx][1];
 		motor_cmds->motor_action[idx].dq = action->motor_action[idx].dq;
 		motor_cmds->motor_action[idx].kp = action->motor_action[idx].kp; 
 		motor_cmds->motor_action[idx].kd = action->motor_action[idx].kd;
@@ -249,7 +276,7 @@ void Robot::get_joint_state(const std::shared_ptr<ambot_msgs::msg::State>& motor
 
 	for(uint8_t idx=0;idx<motor_cmds->motor_num;idx++){
 		state->motor_state[idx].id = motor_fdbk->motor_state[idx].id;
-		state->motor_state[idx].q = motor_fdbk->motor_state[idx].q;
+		state->motor_state[idx].q = tosimrobot_params[idx][0] * motor_fdbk->motor_state[idx].q + tosimrobot_params[idx][1];
 		state->motor_state[idx].dq = motor_fdbk->motor_state[idx].dq;
 		state->motor_state[idx].tau = motor_fdbk->motor_state[idx].tau; 
 		state->motor_state[idx].temp = motor_fdbk->motor_state[idx].temp;

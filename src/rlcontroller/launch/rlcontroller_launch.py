@@ -9,7 +9,7 @@ def generate_launch_description():
     package_share_dir = get_package_share_directory(
         'rlcontroller')
     policy_dir = osp.join(osp.dirname(osp.dirname(osp.dirname(osp.dirname(osp.dirname(package_share_dir))))),"legged_policies")
-    policy_path = osp.join(policy_dir,"ambotw1","tag_4")
+    policy_path = osp.join(policy_dir,"ambotw1","tag_b_1")
     print("policy path:", policy_path)
 
     return launch.LaunchDescription([

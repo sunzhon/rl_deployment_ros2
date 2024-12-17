@@ -1,0 +1,63 @@
+ambotw1_node:
+  ros__parameters:
+    realrobot_joint_limits_hight_0: 0.1
+    realrobot_joint_limits_low_0: -0.1
+    realrobot_joint_limits_hight_1: 0.1
+    realrobot_joint_limits_low_1: -0.1
+    realrobot_joint_limits_hight_2: 0.1
+    realrobot_joint_limits_low_2: -0.1
+
+    realrobot_joint_limits_hight_3: 0.1
+    realrobot_joint_limits_low_3: -0.1
+    realrobot_joint_limits_hight_4: 0.1
+    realrobot_joint_limits_low_4: -0.1
+    realrobot_joint_limits_hight_5: 0.1
+    realrobot_joint_limits_low_5: -0.1
+
+    realrobot_joint_limits_hight_6: 0.1
+    realrobot_joint_limits_low_6: -0.1
+    realrobot_joint_limits_hight_7: 0.1
+    realrobot_joint_limits_low_7: -0.1
+    realrobot_joint_limits_hight_8: 0.1
+    realrobot_joint_limits_low_8: -0.1
+
+    realrobot_joint_limits_hight_9: 0.1
+    realrobot_joint_limits_low_9: -0.1
+    realrobot_joint_limits_hight_10: 0.1
+    realrobot_joint_limits_low_10: -0.1
+    realrobot_joint_limits_hight_11: 0.1
+    realrobot_joint_limits_low_11: -0.1
+
+
+    simrobot_joint_limits_hight_0: 0.1
+    simrobot_joint_limits_low_0: -0.1
+    simrobot_joint_limits_hight_1: 0.1
+    simrobot_joint_limits_low_1: -0.1
+    simrobot_joint_limits_hight_2: 0.1
+    simrobot_joint_limits_low_2: -0.1
+
+    simrobot_joint_limits_hight_3: 0.1
+    simrobot_joint_limits_low_3: -0.1
+    simrobot_joint_limits_hight_4: 0.1
+    simrobot_joint_limits_low_4: -0.1
+    simrobot_joint_limits_hight_5: 0.1
+    simrobot_joint_limits_low_5: -0.1
+
+    simrobot_joint_limits_hight_6: 0.1
+    simrobot_joint_limits_low_6: -0.1
+    simrobot_joint_limits_hight_7: 0.1
+    simrobot_joint_limits_low_7: -0.1
+    simrobot_joint_limits_hight_8: 0.1
+    simrobot_joint_limits_low_8: -0.1
+
+    simrobot_joint_limits_hight_9: 0.1
+    simrobot_joint_limits_low_9: -0.1
+    simrobot_joint_limits_hight_10: 0.1
+    simrobot_joint_limits_low_10: -0.1
+    simrobot_joint_limits_hight_11: 0.1
+    simrobot_joint_limits_low_11: -0.1
+
+    motor_device: "/dev/M1080"
+    imu_device: "/dev/YIS106"
+    cyber_device: "/dev/ttyACM0"
+    motor_num: 12

@@ -2,6 +2,15 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 def generate_launch_description():
+
+    ld = LaunchDescription()
+    config = os.path.join(
+        get_package_share_directory('ambotw1'),
+        'config',
+        'params.yaml'
+        )
+
+
     return LaunchDescription([
         Node(
             package="ambotw1",
@@ -11,10 +20,7 @@ def generate_launch_description():
             emulate_tty=True,
             node_namespace="ambotw1_ns",
             parameters=[
-                {"motor_device": "/dev/M1080"},
-                {"imu_device": "/dev/YIS106"},
-                {"cyber_device": "/dev/ttyACM0"},
-                {"motor_num": 12},
+                config
             ]
         )
     ])

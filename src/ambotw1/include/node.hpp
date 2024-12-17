@@ -41,6 +41,13 @@ class Robot
 
 		std::shared_ptr<yesense::YesenseDriver> imu;
 		std::shared_ptr<CyberGearCan> cybergear;
+
+
+		std::vector<std::vector<float>> realrobot_joint_limits;
+	std::vector<std::vector<float>> simrobot_joint_limits;
+	std::vector<std::vector<float>> torealrobot_params;
+	std::vector<std::vector<float>> tosimrobot_params;
+
 	private:
 		// motors and imu objects
 		std::shared_ptr<SerialPort> motors;

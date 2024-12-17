@@ -104,10 +104,15 @@ install(FILES  "${CYBERGEAR_BUILD}/install/lib/libcybergear_sdk.so"
         DESTINATION lib)
 
 
-# Install launch files.
+# Install launch files
 install(DIRECTORY
   launch
   DESTINATION share/${PROJECT_NAME}/
+)
+# install config files
+install(DIRECTORY
+  config
+  DESTINATION share/${PROJECT_NAME}
 )
 
 ament_package()
