@@ -1,4 +1,4 @@
-laser_geometry==1.6.7
+
 numpy==1.23.5
 pandas==2.0.3
 sensor-msgs==1.13.1

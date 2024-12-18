@@ -24,14 +24,15 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 
 	// timer tasks of action and state transition
 	action_timer = this->create_wall_timer(5ms, std::bind(&RobotRosNode::action_timer_callback, this));
-	state_timer = this->create_wall_timer(5ms, std::bind(&RobotRosNode::state_timer_callback, this));
-	sensor_timer = this->create_wall_timer(5ms, std::bind(&RobotRosNode::sensor_timer_callback, this));
+	publish_timer = this->create_wall_timer(5ms, std::bind(&RobotRosNode::publish_timer_callback, this));
+	imu_timer = this->create_wall_timer(10ms, std::bind(&RobotRosNode::imu_timer_callback, this));
 
-	// rosparameter
+	// declare rosparameter
 	this->declare_parameter<std::string>("motor_device", "/dev/M1080");
 	this->declare_parameter<std::string>("imu_device", "/dev/YIS106");
 	this->declare_parameter<std::string>("cyber_device", "/dev/ttyACM0");
 	this->declare_parameter<int>("motor_num", 12);
+	// get ros params
 	this->get_parameter("motor_num", this->motor_num);
 	for(uint8_t idx=0;idx<motor_num; idx++){
 		this->declare_parameter<float>("realrobot_joint_limits_high_"+std::to_string(idx), 0.0);
@@ -54,7 +55,9 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 	this->get_parameter("motor_device", devices[0]);
 	this->get_parameter("imu_device", devices[1]);
 	this->get_parameter("cyber_device", devices[2]);
-	this->init_robot(devices);
+
+	// init motors
+	this->init_robot(devices, this->motor_num);
 
 	// get sim real translation params
 	realrobot_joint_limits.resize(motor_num);
@@ -77,18 +80,16 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 		sim_params.at(idx)[0] = (simrobot_joint_limits.at(idx)[0]- simrobot_joint_limits.at(idx)[1])/(realrobot_joint_limits.at(idx)[0]-realrobot_joint_limits.at(idx)[1]);
 		sim_params.at(idx)[1] = simrobot_joint_limits.at(idx)[0] - realrobot_joint_limits.at(idx)[0] * sim_params.at(idx)[0];
 		
-		printf("motor: %d: real limits: %f, %f\n", idx, realrobot_joint_limits.at(idx)[0], realrobot_joint_limits.at(idx)[1]);
-		printf("motor: %d: sim limits: %f, %f\n", idx, simrobot_joint_limits.at(idx)[0], simrobot_joint_limits.at(idx)[1]);
-		printf("motor: %d: real param: %f, %f\n", idx, real_params.at(idx)[0], real_params.at(idx)[1]);
-		printf("motor: %d: sim param: %f, %f\n", idx, sim_params.at(idx)[0], sim_params.at(idx)[1]);
+		//printf("motor: %d: real limits: %f, %f\n", idx, realrobot_joint_limits.at(idx)[0], realrobot_joint_limits.at(idx)[1]);
+		//printf("motor: %d: sim limits: %f, %f\n", idx, simrobot_joint_limits.at(idx)[0], simrobot_joint_limits.at(idx)[1]);
+		//printf("motor: %d: real param: %f, %f\n", idx, real_params.at(idx)[0], real_params.at(idx)[1]);
+		//printf("motor: %d: sim param: %f, %f\n", idx, sim_params.at(idx)[0], sim_params.at(idx)[1]);
 	}
-
-
 
 }
 
-
-void RobotRosNode::state_timer_callback() // for peroidic publish data
+//publish sensory data
+void RobotRosNode::publish_timer_callback() // for peroidic publish data
 {
 
 	// publish robot state
@@ -99,14 +100,21 @@ void RobotRosNode::state_timer_callback() // for peroidic publish data
 	}
 }
 
-void RobotRosNode::sensor_timer_callback() // for peroidic publish data
+// read imu data
+void RobotRosNode::imu_timer_callback()
 {
-
-	this->imu->fetchImuData();
+	// fetch imu data from serial
+	imu->fetchImuData();
 	RCLCPP_DEBUG(this->get_logger(), "fetch imu data");
+
+	// process imu data
+	imu->processImuData();
+	RCLCPP_DEBUG(this->get_logger(), "process imu data");
+
 }
 
-void RobotRosNode::action_timer_callback() // for peroidic publish data
+// move motors and read sensry feedback according to actions
+void RobotRosNode::action_timer_callback()
 {
 	this->move_motor(action_ptr, state_ptr);
 	this->read_imu(state_ptr);
@@ -115,7 +123,6 @@ void RobotRosNode::action_timer_callback() // for peroidic publish data
 
 
 void RobotRosNode::action_callback(ambot_msgs::msg::Action::SharedPtr data) const{
-	//std::cout<<motor_num<<std::endl;
 	assert(this->motor_num==data->motor_num);
 	for (int i = 0; i < data->motor_num; i++){
 		action_ptr->motor_action[i].id = data->motor_action[i].id;
@@ -138,19 +145,20 @@ Robot::Robot(void){
 	motor_fdbk = std::make_shared<ambot_msgs::msg::State>();
 }
 
-void Robot::init_robot(std::vector<std::string> devices){
+void Robot::init_robot(std::vector<std::string> devices, int motor_num){
 
 	// open unitree motor device
 	if(!devices[0].empty()){
 		try {
 			if(access(devices[0].c_str(),0)!=F_OK){
 				throw std::runtime_error("Error: " + devices[0] + " does not exist.");
+				exit(-1);
 			}
 			motors = std::make_shared<SerialPort>(devices[0].c_str());
 			std::cout <<  "Sucessfully open motor device"<<  std::endl;
 			// scane motors
 			motor_cmds->motor_num=0;
-			for(uint8_t id=1;id<20;id++){
+			for(uint8_t id=1;id<motor_num+1;id++){// motor id starting from 1
 				MotorCmd cmd;
 				MotorData data;
 				data.motorType = MotorType::GO_M8010_6;
@@ -174,6 +182,11 @@ void Robot::init_robot(std::vector<std::string> devices){
 
 			printf("Found %i motors\n",motor_cmds->motor_num);
 
+			if(motor_cmds->motor_num==0){
+			printf("No motors, exit\n");
+			exit(-1);
+			}
+
 		} catch (const std::exception& e) {
 			std::cerr << e.what() << std::endl;
 		}
@@ -183,9 +196,16 @@ void Robot::init_robot(std::vector<std::string> devices){
 
 	// open imu device
 	if(!devices[1].empty()){
+			if(access(devices[1].c_str(),0)!=F_OK){
+				throw std::runtime_error("Error: " + devices[1] + " does not exist.");
+				exit(-1);
+			}
+
 		imu = std::make_shared<yesense::YesenseDriver>(devices[1],460800);
 	}else{
 		std::cout <<  "do not open imu device"<<  std::endl;
+			printf("No IMU devices, exit\n");
+			exit(-1);
 	}
 
 	// open cyber motor device
@@ -234,7 +254,7 @@ void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  
 		}else{
 			cmd.id = idx+1;
 			cmd.kp = 0.0;
-			cmd.kd = 0.1;
+			cmd.kd = 0.05;
 			cmd.q = 0.0;
 			cmd.dq = 0.0;
 			cmd.tau = 0.0;
@@ -296,14 +316,8 @@ void Robot::get_joint_state(const std::shared_ptr<ambot_msgs::msg::State>& motor
 
 void Robot::read_imu(std::shared_ptr<ambot_msgs::msg::State>& state){
 
-	// process imu data
-	imu->processImuData();
-
 	// read imu data
 	imu_data = imu->readImuData();
-
-	std::cout<<"imu x:"<<imu_data.angle_x<<std::endl;
-	std::cout<<"imu y:"<<imu_data.angle_y<<std::endl;
 
 	// fill imu state msg
 	state->imu_state.gyroscope.x = imu_data.angle_x;
@@ -340,7 +354,7 @@ Robot::~Robot(void){
 		motors->sendRecv(&cmd, &data);
 	}
 
-	std::cout <<  " stop motors " <<  std::endl;
+	std::cout <<  "Stop motors " <<  std::endl;
 
 }
 

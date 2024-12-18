@@ -30,7 +30,7 @@ class Robot
 	public:
 		Robot();
 		~Robot(void);
-		void init_robot(std::vector<std::string> devices);
+		void init_robot(std::vector<std::string> devices, int motor_num);
 		void move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action, std::shared_ptr<ambot_msgs::msg::State>& state);
 		void get_motor_cmds(const std::shared_ptr<ambot_msgs::msg::Action>& action, std::shared_ptr<ambot_msgs::msg::Action>& motor_cmds);
 		void get_joint_state(const std::shared_ptr<ambot_msgs::msg::State>& motor_fdbk, std::shared_ptr<ambot_msgs::msg::State>& state);
@@ -67,13 +67,13 @@ class RobotRosNode : public rclcpp::Node, public Robot
 		void set_state( ambot_msgs::msg::State data);
 		void get_action();
 	private:
-		void state_timer_callback(); // for peroidic publish data
+		void publish_timer_callback(); // for peroidic publish data
 		void action_timer_callback(); // for peroidic publish data
-		void sensor_timer_callback(); // for peroidic publish data
+		void imu_timer_callback(); // for peroidic publish data
 		void action_callback(ambot_msgs::msg::Action::SharedPtr data) const;
 		rclcpp::TimerBase::SharedPtr action_timer;
-		rclcpp::TimerBase::SharedPtr state_timer;
-		rclcpp::TimerBase::SharedPtr sensor_timer;
+		rclcpp::TimerBase::SharedPtr publish_timer;
+		rclcpp::TimerBase::SharedPtr imu_timer;
 		rclcpp::Publisher<ambot_msgs::msg::State>::SharedPtr state_publisher;
 		rclcpp::Subscription<ambot_msgs::msg::Action>::SharedPtr action_subscription;
 
