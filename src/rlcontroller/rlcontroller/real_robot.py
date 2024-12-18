@@ -144,13 +144,13 @@ class RobotCfgs:
             "HR_joint3",
         ]
         dof_signs = [1.] * 12
-        joint_limits_high = torch.tensor([
+        joint_limits_high = torch.tensor([#from urdf
             1.0472, 3.4907, 0.83776,
             1.0472, 3.4907, 0.83776,
             1.0472, 4.5379, 0.83776,
             1.0472, 4.5379, 0.83776,
         ], device= "cpu", dtype= torch.float32)
-        joint_limits_low = torch.tensor([
+        joint_limits_low = torch.tensor([# from urdf
             -1.0472, -1.5708, -2.7227,
             -1.0472, -1.5708, -2.7227,
             -1.0472, -0.5236, -2.7227,
@@ -179,7 +179,7 @@ class Ros2RealRobot(Node):
             replace_obs_with_embeddings= [], # a list of strings, e.g. ["forward_depth"] then the corrseponding obs will be processed by _get_forward_depth_embedding_obs()
             move_by_wireless_remote= True, # if True, the robot will be controlled by a wireless remote
             model_device= "cpu",
-            dof_pos_protect_ratio= 1.1, # if the dof_pos is out of the range of this ratio, the process will shutdown.
+            dof_pos_protect_ratio= 1.05, # if the dof_pos is out of the range of this ratio, the process will shutdown.
             robot_class_name= "AmbotN1",
             dryrun= True, # if True, the robot will not send commands to the real robot
         ):

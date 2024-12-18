@@ -34,10 +34,10 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 	this->declare_parameter<int>("motor_num", 12);
 	this->get_parameter("motor_num", this->motor_num);
 	for(uint8_t idx=0;idx<motor_num; idx++){
-	this->declare_parameter<float>("realrobot_joint_limits_high_"+std::to_string(idx), 0.0);
-	this->declare_parameter<float>("realrobot_joint_limits_low_"+std::to_string(idx), 0.0);
-	this->declare_parameter<float>("simrobot_joint_limits_high_"+std::to_string(idx), 0.0);
-	this->declare_parameter<float>("simrobot_joint_limits_low_"+std::to_string(idx), 0.0);
+		this->declare_parameter<float>("realrobot_joint_limits_high_"+std::to_string(idx), 0.0);
+		this->declare_parameter<float>("realrobot_joint_limits_low_"+std::to_string(idx), 0.0);
+		this->declare_parameter<float>("simrobot_joint_limits_high_"+std::to_string(idx), 0.0);
+		this->declare_parameter<float>("simrobot_joint_limits_low_"+std::to_string(idx), 0.0);
 	}
 
 	action_ptr = std::make_shared<ambot_msgs::msg::Action>();
@@ -76,6 +76,11 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 		real_params.at(idx)[1] = realrobot_joint_limits.at(idx)[0] - simrobot_joint_limits.at(idx)[0] * real_params.at(idx)[0];
 		sim_params.at(idx)[0] = (simrobot_joint_limits.at(idx)[0]- simrobot_joint_limits.at(idx)[1])/(realrobot_joint_limits.at(idx)[0]-realrobot_joint_limits.at(idx)[1]);
 		sim_params.at(idx)[1] = simrobot_joint_limits.at(idx)[0] - realrobot_joint_limits.at(idx)[0] * sim_params.at(idx)[0];
+		
+		printf("motor: %d: real limits: %f, %f\n", idx, realrobot_joint_limits.at(idx)[0], realrobot_joint_limits.at(idx)[1]);
+		printf("motor: %d: sim limits: %f, %f\n", idx, simrobot_joint_limits.at(idx)[0], simrobot_joint_limits.at(idx)[1]);
+		printf("motor: %d: real param: %f, %f\n", idx, real_params.at(idx)[0], real_params.at(idx)[1]);
+		printf("motor: %d: sim param: %f, %f\n", idx, sim_params.at(idx)[0], sim_params.at(idx)[1]);
 	}
 
 
@@ -143,13 +148,7 @@ void Robot::init_robot(std::vector<std::string> devices){
 			}
 			motors = std::make_shared<SerialPort>(devices[0].c_str());
 			std::cout <<  "Sucessfully open motor device"<<  std::endl;
-
-			// scan motors
-			// /*
-			//  Do something to scan all connected motors 
-			//
-			// */
-
+			// scane motors
 			motor_cmds->motor_num=0;
 			for(uint8_t id=1;id<20;id++){
 				MotorCmd cmd;
@@ -161,9 +160,12 @@ void Robot::init_robot(std::vector<std::string> devices){
 				motors->sendRecv(&cmd, &data);
 				if(data.motor_id==id){
 					motor_cmds->motor_num++;
+					printf("find motor with id: %d\n", id);
 				}else{
 					break;
 				}
+				sleep(1);
+
 			}
 
 			motor_cmds->motor_action.resize(motor_cmds->motor_num);
@@ -282,6 +284,7 @@ void Robot::get_joint_state(const std::shared_ptr<ambot_msgs::msg::State>& motor
 	for(uint8_t idx=0;idx<motor_cmds->motor_num;idx++){
 		state->motor_state[idx].id = motor_fdbk->motor_state[idx].id;
 		state->motor_state[idx].q = sim_params[idx][0] * motor_fdbk->motor_state[idx].q + sim_params[idx][1];
+		//state->motor_state[idx].q = motor_fdbk->motor_state[idx].q ;
 		state->motor_state[idx].dq = motor_fdbk->motor_state[idx].dq;
 		state->motor_state[idx].tau = motor_fdbk->motor_state[idx].tau; 
 		state->motor_state[idx].temp = motor_fdbk->motor_state[idx].temp;
@@ -298,6 +301,9 @@ void Robot::read_imu(std::shared_ptr<ambot_msgs::msg::State>& state){
 
 	// read imu data
 	imu_data = imu->readImuData();
+
+	std::cout<<"imu x:"<<imu_data.angle_x<<std::endl;
+	std::cout<<"imu y:"<<imu_data.angle_y<<std::endl;
 
 	// fill imu state msg
 	state->imu_state.gyroscope.x = imu_data.angle_x;

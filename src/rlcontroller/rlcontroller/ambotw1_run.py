@@ -105,6 +105,7 @@ def main():
     assert args.logdir is not None, "Please provide a logdir"
     with open(osp.join(args.logdir,"config.json"), "r") as f:
         config_dict = json.load(f, object_pairs_hook= OrderedDict)
+        print(f"config: {config_dict}")
     
     #4) modify the config_dict if needed
     config_dict["control"]["computer_clip_torque"] = True

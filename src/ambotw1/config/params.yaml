@@ -1,61 +1,61 @@
 ambotw1_ns:
         ambotw1_node:
           ros__parameters:
-            realrobot_joint_limits_hight_0: 1.4
-            realrobot_joint_limits_low_0: 0.0
-            realrobot_joint_limits_hight_1: 2.73
+            realrobot_joint_limits_high_0: 1.37
+            realrobot_joint_limits_low_0: -0.03
+            realrobot_joint_limits_high_1: 2.73
             realrobot_joint_limits_low_1: 0.33
-            realrobot_joint_limits_hight_2: 0.25
+            realrobot_joint_limits_high_2: 0.25
             realrobot_joint_limits_low_2: -0.81
         
-            realrobot_joint_limits_hight_3: 0.0
-            realrobot_joint_limits_low_3: -1.4
-            realrobot_joint_limits_hight_4: 0.65
-            realrobot_joint_limits_low_4: -1.75
-            realrobot_joint_limits_hight_5: 0.81
-            realrobot_joint_limits_low_5: -0.25
+            realrobot_joint_limits_high_3: 0.96
+            realrobot_joint_limits_low_3: -0.44
+            realrobot_joint_limits_high_4: 0.68
+            realrobot_joint_limits_low_4: -1.72
+            realrobot_joint_limits_high_5: 1.83
+            realrobot_joint_limits_low_5: 0.77
         
-            realrobot_joint_limits_hight_6: 0.55
-            realrobot_joint_limits_low_6: -0.85
-            realrobot_joint_limits_hight_7: 0.36
-            realrobot_joint_limits_low_7: -2.04
-            realrobot_joint_limits_hight_8: 1.16
-            realrobot_joint_limits_low_8: 0.1
+            realrobot_joint_limits_high_6: 0.59
+            realrobot_joint_limits_low_6: -0.81
+            realrobot_joint_limits_high_7: 0.39
+            realrobot_joint_limits_low_7: -2.01
+            realrobot_joint_limits_high_8: 1.15
+            realrobot_joint_limits_low_8: 0.09
         
-            realrobot_joint_limits_hight_9: 2.08
-            realrobot_joint_limits_low_9: 0.68
-            realrobot_joint_limits_hight_10: 3.29
-            realrobot_joint_limits_low_10: 0.89
-            realrobot_joint_limits_hight_11: 0.62
-            realrobot_joint_limits_low_11: -0.44
+            realrobot_joint_limits_high_9: 1.13
+            realrobot_joint_limits_low_9: -0.27
+            realrobot_joint_limits_high_10: 2.29
+            realrobot_joint_limits_low_10: -0.11
+            realrobot_joint_limits_high_11: 0.65
+            realrobot_joint_limits_low_11: -0.41
         
         
-            simrobot_joint_limits_hight_0: 1.0
+            simrobot_joint_limits_high_0: 1.0
             simrobot_joint_limits_low_0: -0.4
-            simrobot_joint_limits_hight_1: 1.4
+            simrobot_joint_limits_high_1: 1.4
             simrobot_joint_limits_low_1: -1.0
-            simrobot_joint_limits_hight_2: 0.8
+            simrobot_joint_limits_high_2: 0.8
             simrobot_joint_limits_low_2: -0.26
         
-            simrobot_joint_limits_hight_3: 0.4
+            simrobot_joint_limits_high_3: 0.4
             simrobot_joint_limits_low_3: -1.0
-            simrobot_joint_limits_hight_4: 1.0
+            simrobot_joint_limits_high_4: 1.0
             simrobot_joint_limits_low_4: -1.4
-            simrobot_joint_limits_hight_5: 0.26
+            simrobot_joint_limits_high_5: 0.26
             simrobot_joint_limits_low_5: -0.8
         
-            simrobot_joint_limits_hight_6: 0.4
+            simrobot_joint_limits_high_6: 0.4
             simrobot_joint_limits_low_6: -1.0
-            simrobot_joint_limits_hight_7: 1.0
+            simrobot_joint_limits_high_7: 1.0
             simrobot_joint_limits_low_7: -1.4
-            simrobot_joint_limits_hight_8: 0.26
+            simrobot_joint_limits_high_8: 0.26
             simrobot_joint_limits_low_8: -0.8
         
-            simrobot_joint_limits_hight_9: 1.0
+            simrobot_joint_limits_high_9: 1.0
             simrobot_joint_limits_low_9: -0.4
-            simrobot_joint_limits_hight_10: 1.4
+            simrobot_joint_limits_high_10: 1.4
             simrobot_joint_limits_low_10: -1.0
-            simrobot_joint_limits_hight_11: 0.8
+            simrobot_joint_limits_high_11: 0.8
             simrobot_joint_limits_low_11: -0.26
         
             motor_device: "/dev/M1080"
