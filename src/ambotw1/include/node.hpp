@@ -6,6 +6,12 @@
 #include <chrono>
 #include <memory>
 #include <cassert>
+#include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
+
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
+
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "ambot_msgs/msg/state.hpp"
@@ -41,6 +47,10 @@ class Robot
 
 		std::shared_ptr<yesense::YesenseDriver> imu;
 		std::shared_ptr<CyberGearCan> cybergear;
+
+
+    		boost::mutex m_mutex_state_;  
+    		boost::mutex m_mutex_action_;  
 
 
 		std::vector<std::vector<float>> realrobot_joint_limits;

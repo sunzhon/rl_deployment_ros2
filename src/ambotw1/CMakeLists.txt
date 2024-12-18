@@ -40,6 +40,7 @@ ExternalProject_Add(
     UPDATE_COMMAND "" #prevent update step
 )
 
+
 set(CYBERGEAR_ROOT ${CMAKE_BINARY_DIR}/_deps/src/cybergear_sdk)
 set(CYBERGEAR_BUILD ${CYBERGEAR_ROOT}-build)
 message("CYBERGEAR_BUILD: ${CYBERGEAR_BUILD}")

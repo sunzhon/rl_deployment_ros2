@@ -36,10 +36,10 @@ namespace yesense{
 
 	YesenseDriver::~YesenseDriver()
 	{
-		std::cout<<"Close yesense device"<<std::endl;
 		if(serial_.isOpen())
 		{
 			serial_.close();
+		std::cout<<"Close yesense device"<<std::endl;
 		}
 		data_buffer_ptr_.reset();
 
@@ -92,10 +92,10 @@ namespace yesense{
 							data_buffer_ptr_->push_back(data_[i]);
 						}
 					}
-					//std::cout<<"yesense serial is available"<<std::endl;
+					std::cout<<"yesense serial is available"<<std::endl;
 				}
-				boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
-					//std::cout<<"yesense serial is NOT available"<<std::endl;
+				//boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+					std::cout<<"yesense serial is NOT available"<<std::endl;
 			}
 
 		} 
@@ -202,7 +202,7 @@ namespace yesense{
 				memcpy(message_in_, message_in_ + pos, cnt);
 				bytes_ = cnt;                         
 			}
-			boost::this_thread::sleep_for(boost::chrono::milliseconds(2));
+			//boost::this_thread::sleep_for(boost::chrono::milliseconds(2));
 
 		}
 	}

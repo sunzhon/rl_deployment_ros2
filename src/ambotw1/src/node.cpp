@@ -23,8 +23,8 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 	action_subscription = this->create_subscription<ambot_msgs::msg::Action>("action", qos_profile, std::bind(&RobotRosNode::action_callback, this, std::placeholders::_1));
 
 	// timer tasks of action and state transition
-	action_timer = this->create_wall_timer(5ms, std::bind(&RobotRosNode::action_timer_callback, this));
-	publish_timer = this->create_wall_timer(5ms, std::bind(&RobotRosNode::publish_timer_callback, this));
+	action_timer = this->create_wall_timer(10ms, std::bind(&RobotRosNode::action_timer_callback, this));
+	publish_timer = this->create_wall_timer(10ms, std::bind(&RobotRosNode::publish_timer_callback, this));
 	imu_timer = this->create_wall_timer(10ms, std::bind(&RobotRosNode::imu_timer_callback, this));
 
 	// declare rosparameter
@@ -96,7 +96,7 @@ void RobotRosNode::publish_timer_callback() // for peroidic publish data
 	if(this->motor_enabled && this->imu_enabled){
 		state_publisher->publish(*state_ptr);
 		// for testing
-		RCLCPP_DEBUG(this->get_logger(), "Publishing state");
+		RCLCPP_INFO(this->get_logger(), "Publishing state");
 	}
 }
 
@@ -105,11 +105,12 @@ void RobotRosNode::imu_timer_callback()
 {
 	// fetch imu data from serial
 	imu->fetchImuData();
-	RCLCPP_DEBUG(this->get_logger(), "fetch imu data");
+	RCLCPP_INFO(this->get_logger(), "fetch imu data");
+	//std::cout<<" fetch data"<<std::endl;
 
 	// process imu data
 	imu->processImuData();
-	RCLCPP_DEBUG(this->get_logger(), "process imu data");
+	RCLCPP_INFO(this->get_logger(), "process imu data");
 
 }
 
@@ -118,22 +119,26 @@ void RobotRosNode::action_timer_callback()
 {
 	this->move_motor(action_ptr, state_ptr);
 	this->read_imu(state_ptr);
-	RCLCPP_DEBUG(this->get_logger(), "Moving motors");
+	RCLCPP_INFO(this->get_logger(), "Moving motors");
 }
 
 
 void RobotRosNode::action_callback(ambot_msgs::msg::Action::SharedPtr data) const{
 	assert(this->motor_num==data->motor_num);
-	for (int i = 0; i < data->motor_num; i++){
-		action_ptr->motor_action[i].id = data->motor_action[i].id;
-		action_ptr->motor_action[i].mode = data->motor_action[i].mode;
-		action_ptr->motor_action[i].q = data->motor_action[i].q;
-		action_ptr->motor_action[i].dq = data->motor_action[i].dq;
-		action_ptr->motor_action[i].tau = data->motor_action[i].tau;
-		action_ptr->motor_action[i].kp = data->motor_action[i].kp;
-		action_ptr->motor_action[i].kd = data->motor_action[i].kd;
+	{
+		//boost::mutex::scoped_lock lock(this->m_mutex_action_); 
+		for (int i = 0; i < data->motor_num; i++){
+
+			action_ptr->motor_action[i].id = data->motor_action[i].id;
+			action_ptr->motor_action[i].mode = data->motor_action[i].mode;
+			action_ptr->motor_action[i].q = data->motor_action[i].q;
+			action_ptr->motor_action[i].dq = data->motor_action[i].dq;
+			action_ptr->motor_action[i].tau = data->motor_action[i].tau;
+			action_ptr->motor_action[i].kp = data->motor_action[i].kp;
+			action_ptr->motor_action[i].kd = data->motor_action[i].kd;
+		}
 	}
-	RCLCPP_DEBUG(this->get_logger(), "receiving action");
+	RCLCPP_INFO(this->get_logger(), "receiving action");
 }
 
 
@@ -151,8 +156,8 @@ void Robot::init_robot(std::vector<std::string> devices, int motor_num){
 	if(!devices[0].empty()){
 		try {
 			if(access(devices[0].c_str(),0)!=F_OK){
-				throw std::runtime_error("Error: " + devices[0] + " does not exist.");
-				exit(-1);
+				//throw std::runtime_error("Error: " + devices[0] + " does not exist.");
+				perror("Error no motor devices, exit\n");
 			}
 			motors = std::make_shared<SerialPort>(devices[0].c_str());
 			std::cout <<  "Sucessfully open motor device"<<  std::endl;
@@ -172,7 +177,7 @@ void Robot::init_robot(std::vector<std::string> devices, int motor_num){
 				}else{
 					break;
 				}
-				sleep(1);
+				sleep(0.1);
 
 			}
 
@@ -197,10 +202,10 @@ void Robot::init_robot(std::vector<std::string> devices, int motor_num){
 	// open imu device
 	if(!devices[1].empty()){
 			if(access(devices[1].c_str(),0)!=F_OK){
-				throw std::runtime_error("Error: " + devices[1] + " does not exist.");
-				exit(-1);
+				//throw std::runtime_error("Error: " + devices[1] + " does not exist.");
+				perror("Error, no imu device, exit\n");
+				//exit(-1);
 			}
-
 		imu = std::make_shared<yesense::YesenseDriver>(devices[1],460800);
 	}else{
 		std::cout <<  "do not open imu device"<<  std::endl;
@@ -287,6 +292,8 @@ void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  
 
 void Robot::get_motor_cmds(const std::shared_ptr<ambot_msgs::msg::Action>& action,  std::shared_ptr<ambot_msgs::msg::Action>& motor_cmds){
 
+	{	
+	boost::mutex::scoped_lock lock(m_mutex_action_); 
 
 	for(uint8_t idx=0;idx<motor_cmds->motor_num;idx++){
 		motor_cmds->motor_action[idx].id = action->motor_action[idx].id;
@@ -296,11 +303,14 @@ void Robot::get_motor_cmds(const std::shared_ptr<ambot_msgs::msg::Action>& actio
 		motor_cmds->motor_action[idx].kd = action->motor_action[idx].kd;
 		motor_cmds->motor_action[idx].tau = action->motor_action[idx].tau;
 	}
+	}
 
 }
 
 void Robot::get_joint_state(const std::shared_ptr<ambot_msgs::msg::State>& motor_fdbk,  std::shared_ptr<ambot_msgs::msg::State>& state){
 
+	{
+		boost::mutex::scoped_lock lock(m_mutex_state_); 
 	for(uint8_t idx=0;idx<motor_cmds->motor_num;idx++){
 		state->motor_state[idx].id = motor_fdbk->motor_state[idx].id;
 		state->motor_state[idx].q = sim_params[idx][0] * motor_fdbk->motor_state[idx].q + sim_params[idx][1];
@@ -309,6 +319,7 @@ void Robot::get_joint_state(const std::shared_ptr<ambot_msgs::msg::State>& motor
 		state->motor_state[idx].tau = motor_fdbk->motor_state[idx].tau; 
 		state->motor_state[idx].temp = motor_fdbk->motor_state[idx].temp;
 		state->motor_state[idx].merror = motor_fdbk->motor_state[idx].merror;
+	}
 	}
 
 
@@ -319,6 +330,8 @@ void Robot::read_imu(std::shared_ptr<ambot_msgs::msg::State>& state){
 	// read imu data
 	imu_data = imu->readImuData();
 
+	{
+	boost::mutex::scoped_lock lock(m_mutex_state_); 
 	// fill imu state msg
 	state->imu_state.gyroscope.x = imu_data.angle_x;
 	state->imu_state.gyroscope.y = imu_data.angle_y;
@@ -332,7 +345,9 @@ void Robot::read_imu(std::shared_ptr<ambot_msgs::msg::State>& state){
 	state->imu_state.quaternion.x= imu_data.quaternion_data1;
 	state->imu_state.quaternion.y= imu_data.quaternion_data2;
 	state->imu_state.quaternion.z= imu_data.quaternion_data3;
+
 	imu_enabled = true;
+	}
 }
 
 
