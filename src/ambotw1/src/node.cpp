@@ -249,7 +249,7 @@ void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  
 	get_motor_cmds(action, motor_cmds);
 
 	//3) send motor cmds and get motor feedback
-	for(uint8_t idx=0;idx<motor_cmds->motor_num;idx++){
+	for(uint8_t idx=0; idx<motor_cmds->motor_num; idx++){
 		//fill and send cmd to motors
 		data.motorType = MotorType::GO_M8010_6;
 		cmd.motorType = MotorType::GO_M8010_6;
@@ -287,8 +287,6 @@ void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  
 		motor_fdbk->motor_state[idx].temp = data.temp;
 		motor_fdbk->motor_state[idx].merror = data.merror;
 		motor_enabled = true;
-
-
 	}
 
 	//4) get joint state
@@ -304,9 +302,16 @@ void Robot::get_motor_cmds(const std::shared_ptr<ambot_msgs::msg::Action>& actio
 		motor_cmds->motor_action[idx].id = action->motor_action[idx].id;
 		motor_cmds->motor_action[idx].q = real_params[idx][0] *action->motor_action[idx].q + real_params[idx][1];
 		motor_cmds->motor_action[idx].dq = action->motor_action[idx].dq;
-		motor_cmds->motor_action[idx].kp = action->motor_action[idx].kp; 
-		motor_cmds->motor_action[idx].kd = action->motor_action[idx].kd;
+		motor_cmds->motor_action[idx].kp = 1; //action->motor_action[idx].kp; //NOTE 
+		motor_cmds->motor_action[idx].kd = 0.1;//action->motor_action[idx].kd;
 		motor_cmds->motor_action[idx].tau = action->motor_action[idx].tau;
+
+
+		//std::cout <<  "motor_cmds->.id: "<<  motor_cmds->motor_action[idx].id <<std::endl;
+		//std::cout <<  "motor_cmds->.q: "<<  motor_cmds->motor_action[idx].q<<std::endl;
+		//std::cout <<  "motor_cmds->.dq: "<<  motor_cmds->motor_action[idx].dq<<std::endl;
+
+
 	}
 	}
 
@@ -319,7 +324,6 @@ void Robot::get_joint_state(const std::shared_ptr<ambot_msgs::msg::State>& motor
 	for(uint8_t idx=0;idx<motor_cmds->motor_num;idx++){
 		state->motor_state[idx].id = motor_fdbk->motor_state[idx].id;
 		state->motor_state[idx].q = sim_params[idx][0] * motor_fdbk->motor_state[idx].q + sim_params[idx][1];
-		//state->motor_state[idx].q = motor_fdbk->motor_state[idx].q ;
 		state->motor_state[idx].dq = motor_fdbk->motor_state[idx].dq;
 		state->motor_state[idx].tau = motor_fdbk->motor_state[idx].tau; 
 		state->motor_state[idx].temp = motor_fdbk->motor_state[idx].temp;

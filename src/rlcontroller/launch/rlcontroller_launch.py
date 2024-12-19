@@ -12,17 +12,21 @@ def generate_launch_description():
     policy_path = osp.join(policy_dir,"ambotw1","tag_b_1")
     print("policy path:", policy_path)
 
+    log_level="info"
     return launch.LaunchDescription([
+        launch.actions.DeclareLaunchArgument(
+            "log_level",
+            default_value=["debug"],
+            description="Logging level",
+            ),
         launch_ros.actions.Node(
             package='rlcontroller', 
             node_executable='rlcontroller_node', 
             output='screen',
+            emulate_tty=True,
             node_namespace="/ambotw1_ns",
             node_name="rlcontroller_node",
-            arguments=["--logdir", policy_path,
-                '--log-level', 'DEBUG'
-                ]
+            arguments=["--logdir", policy_path, '--log-level', log_level]
             )
     ])
-
 

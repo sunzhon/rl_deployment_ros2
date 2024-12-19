@@ -133,6 +133,7 @@ def main():
         privileged_obs_segments= env_node.privileged_obs_segments,
         **config_dict["policy"]
     )
+
     # load the model with the latest checkpoint
     model_names = [i for i in os.listdir(args.logdir) if i.startswith("model_")]
     model_names.sort(key= lambda x: int(x.split("_")[-1].split(".")[0]))
