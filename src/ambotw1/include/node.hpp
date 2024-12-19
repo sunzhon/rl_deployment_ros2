@@ -18,6 +18,13 @@
 #include "yesense.hpp"
 
 
+#include <functional>
+#include <memory>
+#include <string>
+#include <thread>
+
+
+
 using namespace std::chrono_literals;
 using namespace yesense;
 
