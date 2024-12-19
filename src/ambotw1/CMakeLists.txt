@@ -22,7 +22,7 @@ find_package(std_msgs REQUIRED)
 find_package(ambot_msgs REQUIRED)
 find_package(serial REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread chrono)
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+#find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 
 
 # include external project of cybergear sdk
@@ -39,6 +39,7 @@ ExternalProject_Add(
     #INSTALL_COMMAND ""  # Disable the install command
     UPDATE_COMMAND "" #prevent update step
 )
+
 
 set(CYBERGEAR_ROOT ${CMAKE_BINARY_DIR}/_deps/src/cybergear_sdk)
 set(CYBERGEAR_BUILD ${CYBERGEAR_ROOT}-build)

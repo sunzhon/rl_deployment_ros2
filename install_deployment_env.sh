@@ -21,12 +21,12 @@ pip install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu1
 fi
 
 echo "2) install python standard package"
-pip install -r requirement.txt
+#pip install -r requirement.txt
 #sudo apt-get install ros-$(rosversion -d)-ros-numpy
 
 echo "3) install rls_rl"
 
-cd ./../rsl_rl/ && pip install -e .
+#cd ./../rsl_rl/ && pip install -e .
 
 
 
