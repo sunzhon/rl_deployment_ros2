@@ -100,4 +100,9 @@ class RobotRosNode : public rclcpp::Node, public Robot
 
 		std::vector<std::string> devices;
 
+		rclcpp::callback_group::CallbackGroup::SharedPtr imu_cb_group_;
+		rclcpp::callback_group::CallbackGroup::SharedPtr sa_cb_group_;
+
+
+
 };

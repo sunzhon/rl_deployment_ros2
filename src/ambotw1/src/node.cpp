@@ -21,11 +21,14 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 	rclcpp::QoS qos_profile(1);
 	qos_profile.reliable(); 
 	action_subscription = this->create_subscription<ambot_msgs::msg::Action>("action", qos_profile, std::bind(&RobotRosNode::action_callback, this, std::placeholders::_1));
-
+	//callback group
+	imu_cb_group_ = this->create_callback_group(rclcpp::callback_group::CallbackGroupType::MutuallyExclusive);
+	sa_cb_group_ = this->create_callback_group(rclcpp::callback_group::CallbackGroupType::MutuallyExclusive);
 	// timer tasks of action and state transition
-	action_timer = this->create_wall_timer(10ms, std::bind(&RobotRosNode::action_timer_callback, this));
-	publish_timer = this->create_wall_timer(10ms, std::bind(&RobotRosNode::publish_timer_callback, this));
-	imu_timer = this->create_wall_timer(10ms, std::bind(&RobotRosNode::imu_timer_callback, this));
+	action_timer = this->create_wall_timer(10ms, std::bind(&RobotRosNode::action_timer_callback, this),sa_cb_group_);
+	publish_timer = this->create_wall_timer(10ms, std::bind(&RobotRosNode::publish_timer_callback, this),sa_cb_group_);
+	imu_timer = this->create_wall_timer(10ms, std::bind(&RobotRosNode::imu_timer_callback, this),imu_cb_group_);
+
 
 	// declare rosparameter
 	this->declare_parameter<std::string>("motor_device", "/dev/M1080");
@@ -88,6 +91,8 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 
 }
 
+
+/************ Callbacks  ********************/
 //publish sensory data
 void RobotRosNode::publish_timer_callback() // for peroidic publish data
 {
