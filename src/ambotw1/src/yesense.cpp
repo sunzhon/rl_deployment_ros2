@@ -92,10 +92,10 @@ namespace yesense{
 							data_buffer_ptr_->push_back(data_[i]);
 						}
 					}
-					std::cout<<"yesense serial is available"<<std::endl;
+					//std::cout<<"yesense serial is available"<<std::endl;
 				}
 				//boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
-					std::cout<<"yesense serial is NOT available"<<std::endl;
+					//std::cout<<"yesense serial is NOT available"<<std::endl;
 			}
 
 		} 

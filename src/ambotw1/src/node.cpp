@@ -23,11 +23,11 @@ RobotRosNode::RobotRosNode(): Node("robot_ros_node")
 	action_subscription = this->create_subscription<ambot_msgs::msg::Action>("action", qos_profile, std::bind(&RobotRosNode::action_callback, this, std::placeholders::_1));
 	//callback group
 	imu_cb_group_ = this->create_callback_group(rclcpp::callback_group::CallbackGroupType::MutuallyExclusive);
-	sa_cb_group_ = this->create_callback_group(rclcpp::callback_group::CallbackGroupType::MutuallyExclusive);
+	sa_cb_group_ = this->create_callback_group(rclcpp::callback_group::CallbackGroupType::Reentrant);
 	// timer tasks of action and state transition
-	action_timer = this->create_wall_timer(10ms, std::bind(&RobotRosNode::action_timer_callback, this),sa_cb_group_);
-	publish_timer = this->create_wall_timer(10ms, std::bind(&RobotRosNode::publish_timer_callback, this),sa_cb_group_);
-	imu_timer = this->create_wall_timer(10ms, std::bind(&RobotRosNode::imu_timer_callback, this),imu_cb_group_);
+	action_timer = this->create_wall_timer(5ms, std::bind(&RobotRosNode::action_timer_callback, this),sa_cb_group_);
+	publish_timer = this->create_wall_timer(5ms, std::bind(&RobotRosNode::publish_timer_callback, this),sa_cb_group_);
+	imu_timer = this->create_wall_timer(5ms, std::bind(&RobotRosNode::imu_timer_callback, this),imu_cb_group_);
 
 
 	// declare rosparameter
@@ -182,7 +182,7 @@ void Robot::init_robot(std::vector<std::string> devices, int motor_num){
 				}else{
 					break;
 				}
-				sleep(0.1);
+				sleep(0.2);
 
 			}
 
@@ -264,7 +264,7 @@ void Robot::move_motor(const std::shared_ptr<ambot_msgs::msg::Action>& action,  
 		}else{
 			cmd.id = idx+1;
 			cmd.kp = 0.0;
-			cmd.kd = 0.05;
+			cmd.kd = 0.02;
 			cmd.q = 0.0;
 			cmd.dq = 0.0;
 			cmd.tau = 0.0;

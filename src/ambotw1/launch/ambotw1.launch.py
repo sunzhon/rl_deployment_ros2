@@ -12,7 +12,7 @@ def generate_launch_description():
         'params.yaml'
         )
 
-    log_level="info"
+    log_level="warn"
     return LaunchDescription([
         DeclareLaunchArgument(
             "log_level",

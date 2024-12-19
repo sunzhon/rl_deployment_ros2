@@ -24,8 +24,8 @@ ambotw1_ns:
         
             realrobot_joint_limits_high_9: 1.13
             realrobot_joint_limits_low_9: -0.27
-            realrobot_joint_limits_high_10: 2.29
-            realrobot_joint_limits_low_10: -0.11
+            realrobot_joint_limits_high_10: 3.26
+            realrobot_joint_limits_low_10: 0.86
             realrobot_joint_limits_high_11: 0.65
             realrobot_joint_limits_low_11: -0.41
         
