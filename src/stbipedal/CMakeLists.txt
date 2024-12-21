@@ -58,8 +58,10 @@ message("lib: ${LIB_PATH}")
 
 if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64") 
     set(EXTRA_LIBS libUnitreeMotorSDK_Arm64.so)
+    message("Using ARM")
 else()
-	set(EXTRA_LIBS libUnitreeMotorSDK_Linux64.so)
+    set(EXTRA_LIBS libUnitreeMotorSDK_Linux64.so)
+    message("Using X86")
 endif()
 
 

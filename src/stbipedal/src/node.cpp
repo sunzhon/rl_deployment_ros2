@@ -182,7 +182,7 @@ void Robot::init_robot(std::vector<std::string> devices, int motor_num){
 				}else{
 					break;
 				}
-				sleep(0.2);
+				sleep(1.0);
 
 			}
 
