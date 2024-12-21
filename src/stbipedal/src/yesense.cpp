@@ -27,7 +27,7 @@ namespace yesense{
 		//fetch_data_thread_.join();
 
 		//process imu data thread
-		//process_data_thread_ = boost::thread(boost::bind(&YesenseDriver::processImuData_,this));
+		//process_data_thread_ = boost::thread(boost::bind(&YesenseDriver::processImuData,this));
 		//process_data_thread_.join();
 
 	}
@@ -36,10 +36,10 @@ namespace yesense{
 
 	YesenseDriver::~YesenseDriver()
 	{
-		std::cout<<"Close yesense device"<<std::endl;
 		if(serial_.isOpen())
 		{
 			serial_.close();
+		std::cout<<"Close yesense device"<<std::endl;
 		}
 		data_buffer_ptr_.reset();
 
@@ -51,16 +51,18 @@ namespace yesense{
 	{
 		try
 		{
-			std::cout <<  "Sucessfully open imu device:" << port_.c_str() << ", buad rate:"<<baudrate_<<  std::endl;
 			serial_.setPort(port_);
 			serial_.setBaudrate(baudrate_);
 			serial::Timeout to = serial::Timeout::simpleTimeout(1000);
 			serial_.setTimeout(to);
 			serial_.open();
+			std::cout <<  "Sucessfully open imu device:" << port_.c_str() << ", buad rate:"<<baudrate_<<  std::endl;
 		}
 		catch (serial::IOException &e)
 		{
 			std::cout <<  "Unable to open imu device:" << port_.c_str() << ", buad rate:"<<baudrate_<<  std::endl;
+			std::cout << "exit" <<std::endl;
+			exit(-1);
 		}
 
 
@@ -90,23 +92,23 @@ namespace yesense{
 							data_buffer_ptr_->push_back(data_[i]);
 						}
 					}
-
+					//std::cout<<"yesense serial is available"<<std::endl;
 				}
-				//boost::this_thread::sleep_for(boost::chrono::milliseconds(5));
-				//std::cout<<"serial no av"<<std::endl;
+				//boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+					//std::cout<<"yesense serial is NOT available"<<std::endl;
 			}
 
 		} 
 		catch (std::exception &err) 
 		{
 			perror("error in fetchImuData_ function ");
-		}    
+		}
 	}
 
 	void YesenseDriver::processImuData(){
 
-		uint16_t tid = 0x00;
-		uint16_t prev_tid = 0x00;
+		//uint16_t tid = 0x00;
+		//uint16_t prev_tid = 0x00;
 
 		uint32_t recv_len = 0;      
 		uint32_t timeout_cnt = 0;
@@ -200,7 +202,7 @@ namespace yesense{
 				memcpy(message_in_, message_in_ + pos, cnt);
 				bytes_ = cnt;                         
 			}
-			boost::this_thread::sleep_for(boost::chrono::milliseconds(5));
+			//boost::this_thread::sleep_for(boost::chrono::milliseconds(2));
 
 		}
 	}

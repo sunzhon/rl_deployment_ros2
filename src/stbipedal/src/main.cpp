@@ -3,7 +3,10 @@
 int main(int argc, char * argv[])
 {
 	rclcpp::init(argc, argv);
-	rclcpp::spin(std::make_shared<RobotRosNode>());
+	rclcpp::executors::MultiThreadedExecutor executor;
+  	auto node = std::make_shared<RobotRosNode>();
+	executor.add_node(node);
+	executor.spin();
 	rclcpp::shutdown();
 	return 0;
 }

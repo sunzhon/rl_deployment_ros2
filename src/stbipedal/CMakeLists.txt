@@ -22,6 +22,7 @@ find_package(std_msgs REQUIRED)
 find_package(ambot_msgs REQUIRED)
 find_package(serial REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread chrono)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 
 
 

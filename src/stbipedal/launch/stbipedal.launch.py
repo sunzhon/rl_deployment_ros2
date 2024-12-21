@@ -1,4 +1,5 @@
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
 import os
 from launch_ros.substitutions import FindPackageShare
@@ -11,17 +12,22 @@ def generate_launch_description():
         'params.yaml'
         )
 
-
+    log_level="warn"
     return LaunchDescription([
+        DeclareLaunchArgument(
+            "log_level",
+            default_value=["debug"],
+            description="Logging level",
+            ),
         Node(
             package=robot,
-            node_executable=robot+"_node",
-            node_name=robot+"_node",
+            executable=robot+"_node",
+            name=robot+"_node",
             output="screen",
             emulate_tty=True,
-            node_namespace=robot+"_ns",
-            parameters=[
-                config
-            ]
+            namespace=robot+"_ns",
+            parameters=[config],
+            arguments=['--ros-args', '--log-level', log_level]
         )
     ])
+

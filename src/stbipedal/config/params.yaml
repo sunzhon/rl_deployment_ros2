@@ -59,6 +59,6 @@ stbipedal_ns:
             simrobot_joint_limits_low_11: -0.1
         
             motor_device: "/dev/M1080"
-            imu_device: "/dev/YIS106"
+            imu_device: "/dev/ttyAMA2"
             cyber_device: "/dev/ttyACM0"
             motor_num: 6
