@@ -143,7 +143,7 @@ void RobotRosNode::action_callback(ambot_msgs::msg::Action::SharedPtr data) cons
 			action_ptr->motor_action[i].kd = data->motor_action[i].kd;
 		}
 	}
-	RCLCPP_INFO(this->get_logger(), "receiving action");
+	RCLCPP_INFO(this->get_logger(), "Receiving action");
 }
 
 
@@ -329,6 +329,7 @@ void Robot::get_joint_state(const std::shared_ptr<ambot_msgs::msg::State>& motor
 		state->motor_state[idx].temp = motor_fdbk->motor_state[idx].temp;
 		state->motor_state[idx].merror = motor_fdbk->motor_state[idx].merror;
 	}
+		//printf("state: %f, fdb: %f\n", state->motor_state[10].q, motor_fdbk->motor_state[10].q);
 	}
 
 

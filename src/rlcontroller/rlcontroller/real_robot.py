@@ -145,16 +145,16 @@ class RobotCfgs:
         ]
         dof_signs = [1.] * 12
         joint_limits_high = torch.tensor([#from urdf
-            1.0472, 3.4907, 0.83776,
-            1.0472, 3.4907, 0.83776,
-            1.0472, 4.5379, 0.83776,
-            1.0472, 4.5379, 0.83776,
+            1.0, 1.4, 0.8,
+            0.4, 1.0, 0.26,
+            0.4, 1.0, 0.26,
+            1.0, 1.4, 0.8,
         ], device= "cpu", dtype= torch.float32)
         joint_limits_low = torch.tensor([# from urdf
-            -1.0472, -1.5708, -2.7227,
-            -1.0472, -1.5708, -2.7227,
-            -1.0472, -0.5236, -2.7227,
-            -1.0472, -0.5236, -2.7227,
+            -0.4, -1.0, -0.26,
+            -1.0, -1.4, -0.8,
+            -1.0, -1.4, -0.8,
+            -0.4, -1.0, -0.26,
         ], device= "cpu", dtype= torch.float32)
         torque_limits = torch.tensor([ # from urdf and in simulation order
             20, 20, 20,
@@ -380,6 +380,7 @@ class Ros2RealRobot(Node):
             if self.dof_pos_[0, sim_idx] > self.joint_pos_protect_high[sim_idx] or \
                 self.dof_pos_[0, sim_idx] < self.joint_pos_protect_low[sim_idx]:
                 self.get_logger().error(f"Joint {sim_idx} (sim), {real_idx} (real) position out of range at {self.low_state_buffer.motor_state[real_idx].q}")
+                self.get_logger().error(f"Joint {sim_idx} (sim), {real_idx} (real) position out of range at {self.dof_pos_[0,sim_idx]}; high_protect at {self.joint_pos_protect_high[sim_idx]}, low_protect at {self.joint_pos_protect_low[sim_idx]}")
                 self.get_logger().error("The motors and this process shuts down.")
                 self._turn_off_motors()
                 raise SystemExit()
